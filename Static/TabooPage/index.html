@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>TimeKeeper</title>
+        <link href="styles/output.css" rel="stylesheet">
+        <script src="index.js"></script>
+    </head>
+    <body>
+        <!-- Main content container (screen center) -->
+        <div class="container flex flex-col items-center justify-center w-1/2 y-1/2">
+            <!-- Alert card item -->
+            <div class="container flex flex-col items-center justify-center m-8 p-6
+            overflow-hidden bg-gradient-to-br from-gray-800 via-gray-900 to-black rounded-3xl">
+                <!-- Alternative colors: from-[#FCC9A2] via-[#F38CC6] to-[#927AF1] -->
+                <span class="text-7xl py-4 font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-[#9DFFFA] via-[#06FF9B] to-[#00FF00]">Don't you dare procrastinate</span>
+                <div class="flex flex-row justify-between space-x-8">
+                    <img insertTabooFavicon src="" class="object-scale-down">
+                    <p class="text-lg text-white">
+                        Never gona give you up<br>
+                        Never gona let you down<br>
+                        Never gona run around and desert you<br>
+                        blah-blah-blah<br>
+                        Sample text
+                    </p>
+                </div>
+                <div class="flex flex-row justify-between w-fit space-x-8 p-6 my-2">
+                    <button disabled id="closeButton" class="basis-1/4 relative group overflow-hidden px-4 h-12 rounded-md bg-lime-500
+                      before:absolute
+                      before:inset-0
+                      before:bg-lime-600
+                      before:scale-y-[0.1]
+                      before:origin-bottom
+                      before:transition
+                      before:duration-300
+                      hover:before:scale-y-100">
+                        <span class="relative text-base text-white">Close this</span>
+                    </button>
+                    <button class="basis-1/2 relative group overflow-hidden px-8 h-12 rounded-md
+                     transition-all duration-500 bg-gradient-to-r from-pink-500 via-red-500 to-yellow-500 bg-size-200 bg-pos-100 hover:bg-pos-0 hover:basis-2/3">
+                        <span class="text-white text-xl">Do random exam task instead</span>
+                    </button>
+                    <button disabled class="basis-1/4 relative group overflow-hidden px-4 h-12 rounded-md bg-lime-500
+                      before:absolute
+                      before:inset-0
+                      before:bg-lime-600
+                      before:scale-y-[0.1]
+                      before:origin-bottom
+                      before:transition
+                      before:duration-300
+                      hover:before:scale-y-100">
+                        <a class="relative text-base text-white"
+                           insertTabooLink id="temporaryAllowLink" href="">Access anyway</a>
+                    </button>
+
+                </div>
+            </div>
+        </div>
+    </body>
+</html>

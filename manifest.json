@@ -1,0 +1,19 @@
+{
+    "name": "TimeKeeper",
+    "description": "Saves your time from procrastination",
+    "version": "0.1",
+    "manifest_version": 3,
+    "background": {
+        "service_worker": "background.js"
+    },
+    "permissions": [
+        "storage",
+        "activeTab",
+        "webNavigation",
+        "tabs",
+        "scripting"
+    ],
+    "action": {
+        "default_popup": "Static/PopupPage/index.html"
+    }
+}
