@@ -1,6 +1,6 @@
 {
     "name": "TimeKeeper",
-    "description": "Saves your time from procrastination",
+    "description": "Help you to achieve effective work/rest balance and reduce procrastination time to 0",
     "version": "0.1",
     "manifest_version": 3,
     "background": {
@@ -14,6 +14,6 @@
         "scripting"
     ],
     "action": {
-        "default_popup": "Static/PopupPage/index.html"
+        "default_popup": "Static/PopupPage/popup.html"
     }
 }
