@@ -43,7 +43,7 @@ function isTabooTab(tab) {
 // region Custom event handlers implementations
 function onNewTabooAdded(tabooDomain) {
     if (tabooWebsites.indexOf(tabooDomain) !== -1) {
-        return true;
+        return;
     }
 
     tabooWebsites.push(tabooDomain);
@@ -58,7 +58,6 @@ function onNewTabooAdded(tabooDomain) {
     // Updating storage values
     chrome.storage.sync.set({"tabooWebsites": tabooWebsites});
     chrome.storage.sync.set({"foreverExcludedTabsIds": foreverExcludedTabsIds});
-    return true;
 }
 // endregion
 
@@ -80,15 +79,12 @@ function oneNewChromeMessage(request, sender, sendResponse) {
             handler(...request["data"]);
         }
     }
-    return true;
 }
 
 function onTabUpdated(tabId, changedInfo, tab) {
-    // TODO: test (especially with loading tabs)
     // Note: For some reason chrome can update undefined tabs so...
     if (tab) {
-        if (isTabooTab(tab)) {
-            // FIXME: This thing is called 5 times for a single tab...
+        if (changedInfo.status === "complete" && isTabooTab(tab)) {
             onTabooWebsiteOpened(tab.url);
         }
     }
