@@ -13,6 +13,5 @@ async function tabooInputKeyDown(event) {
 }
 
 async function onNewTabooAdded(tabooDomain) {
-    // TODO: figure out how can I ignore promises without errors
     await chrome.runtime.sendMessage({"event": "onNewTabooAdded", "data": [tabooDomain]});
 }
