@@ -16,8 +16,6 @@ chrome.storage.sync.get(["tabooWebsites", "foreverExcludedTabsIds", "oneWayExclu
             oneWayExcludedTabsIds = result.oneWayExcludedTabsIds;
         }
     });
-// TODO: add with delay like last time? +
-//  if this will not work for async use: (...) => { onTabUpdated(...); }
 chrome.tabs.onUpdated.addListener(onTabUpdated);
 chrome.tabs.onRemoved.addListener(onTabUpdated);
 chrome.runtime.onMessage.addListener(oneNewChromeMessage);
@@ -72,13 +70,16 @@ function onTabRemoved(tabId, removedInfo) {
 
 function oneNewChromeMessage(request, sender, sendResponse) {
     // Check if event has been triggered
-    let handlers = customEventHandlers[request["event"]]
+    let handlers = customEventHandlers[request["event"]];
     if (handlers) {
         // Calling all handlers with await (no matter if they are sync or async)
         for (let handler of handlers) {
             handler(...request["data"]);
         }
     }
+    // This function has to return something to message sender
+    // (Otherwise there will be error with ignored promise)
+    return true;
 }
 
 function onTabUpdated(tabId, changedInfo, tab) {

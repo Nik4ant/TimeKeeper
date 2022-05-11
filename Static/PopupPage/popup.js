@@ -1,17 +1,24 @@
-let tabooInputElement;
 document.addEventListener("DOMContentLoaded", (_) => {
-    tabooInputElement = document.getElementById("tabooInput");
+    let tabooInputElement = document.getElementById("tabooInput");
     // If enter is pressed then new taboo domain added
-    tabooInputElement.addEventListener("keydown", async(event) => { await tabooInputKeyDown(event); });
+    tabooInputElement.addEventListener("keydown", tabooInputKeyDown);
+
+    let tabooButtonElement = document.getElementById("addTabooButton");
+    // On add button click new taboo domain added
+    tabooButtonElement.addEventListener("click", async() => {
+        await onNewTabooAdded(tabooInputElement.value);
+    });
 });
-// TODO: on button click as well...
 
 async function tabooInputKeyDown(event) {
     if (event.key === "Enter") {
-        await onNewTabooAdded(tabooInputElement.value);
+        await onNewTabooAdded(event.target.value);
     }
 }
 
 async function onNewTabooAdded(tabooDomain) {
-    await chrome.runtime.sendMessage({"event": "onNewTabooAdded", "data": [tabooDomain]});
+    // Validating string
+    if (tabooDomain) {
+        await chrome.runtime.sendMessage({"event": "onNewTabooAdded", "data": [tabooDomain]});
+    }
 }
