@@ -4,6 +4,7 @@ module.exports = {
   ],
   theme: {
     extend: {
+      // Stuff for animating gradient
       backgroundSize: {
         'size-200': '200% 200%',
       },

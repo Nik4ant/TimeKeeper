@@ -1,3 +1,31 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+
+@layer components {
+    /* FIXME: This looks awful */
+    .default-navbar-link {
+        @apply inline-flex p-4 rounded-t-lg border-b-2;
+    }
+
+    .default-navbar-icon {
+        @apply self-center mr-2 h-4 w-4;
+    }
+
+    .active-navbar-link {
+        @apply text-blue-600 border-blue-600;
+    }
+
+    .disabled-navbar-link {
+        @apply border-transparent hover:text-gray-600 hover:border-gray-300;
+    }
+
+    .active-navbar-icon {
+        @apply text-blue-600;
+    }
+
+    .disabled-navbar-icon {
+        @apply text-gray-400;
+    }
+}
