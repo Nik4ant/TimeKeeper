@@ -17,9 +17,10 @@ let useCustomSoundForNotifications = true;
 // Event handlers for custom events
 const customEventHandlers = {
     "onNewTabooAdded": [onNewTabooAdded],
+    "onTabooDeleted": [onTabooDeleted],
     // TODO: maybe figure out better names for all that stuff with work/relax balance
-    "onBreakTimeStart": [],
-    "onBreakTimeEnd": []
+    /*"onBreakTimeStart": [],
+    "onBreakTimeEnd": []*/
 }
 // FIXME: Is there any reason why should I keep .then?
 initOnStartup().then(_ => _);
@@ -79,8 +80,12 @@ async function loadSyncStorageItem(key, defaultValue) {
 
 // region Custom event handlers implementations
 function onNewTabooAdded(tabooDomain) {
-    if (tabooWebsites.indexOf(tabooDomain) !== -1) {
-        return;
+    // Check for similar taboo domains.
+    // For example, "youtube.com" and "youtube" are the same thing
+    for (const tabooWebsite of tabooWebsites) {
+        if (tabooWebsite.indexOf(tabooDomain) !== -1) {
+            return false;
+        }
     }
 
     tabooWebsites.push(tabooDomain);
@@ -90,6 +95,26 @@ function onNewTabooAdded(tabooDomain) {
             if (isTabooTab(tab)) {
                 foreverExcludedTabsIds.push(tab.id);
             }
+        }
+    });
+    // Updating storage values
+    chrome.storage.sync.set({"tabooWebsites": tabooWebsites});
+    chrome.storage.sync.set({"foreverExcludedTabsIds": foreverExcludedTabsIds});
+    return true;
+}
+
+
+function onTabooDeleted(tabooDomain) {
+    tabooWebsites.splice(tabooWebsites.indexOf(tabooDomain), 1);
+    // Removing excluded tabs that were taboo
+    chrome.tabs.query({}, (tabs) => {
+        for (const [i, tabId] of foreverExcludedTabsIds.entries()) {
+            chrome.tabs.get(tabId).then((tab) => {
+                if (tab.url.indexOf(tabooDomain) !== -1) {
+                    foreverExcludedTabsIds.splice(i, 1);
+                }
+            });
+
         }
     });
     // Updating storage values
@@ -114,12 +139,10 @@ function oneNewChromeMessage(request, sender, sendResponse) {
     if (handlers) {
         // Calling all handlers with await (no matter if they are sync or async)
         for (let handler of handlers) {
-            handler(...request["data"]);
+            // Note(Nik4ant): That doesn't look stable to me, but it works, so...
+            sendResponse(handler(...request["data"]));
         }
     }
-    // This function has to return something to message sender
-    // (Otherwise there will be error with ignored promise)
-    return true;
 }
 
 

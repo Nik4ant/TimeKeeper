@@ -54,8 +54,16 @@
                         </span>
                     </button>
                 </div>
-                <p id="tooShortErrorText" class="mt-2 text-sm text-red-600 hidden">Taboo domain is <span class="font-bold">too short!</span></p>
+                <p id="inputErrorText" class="mt-2 text-sm text-red-600 hidden"></p>
             </div>
+            <!-- Template to insert/remove taboo websites using js -->
+            <template id="tabooWebsiteTemplate">
+                <div class="flex space-x-2 items-center p-2 bg-white border border-gray-200 rounded-md">
+                    <p tabooDomain class="flex-1 font-medium text-base text-gray-800 decoration-pink-500"></p>
+                    <svg deleteIcon class="h-6 w-6 text-red-500 hover:text-red-700" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">  <path stroke="none" d="M0 0h24v24H0z"/>  <line x1="4" y1="7" x2="20" y2="7" />  <line x1="10" y1="11" x2="10" y2="17" />  <line x1="14" y1="11" x2="14" y2="17" />  <path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" /></svg>
+                    <svg editIcon class="h-6 w-6 text-yellow-500 hover:text-yellow-600" width="24"  height="24" viewBox="0 0 24 24"  xmlns="http://www.w3.org/2000/svg"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round">  <path d="M12 20h9" />  <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" /></svg>
+                </div>
+            </template>
             <!-- Taboo websites and excluded tabs -->
             <div class="flex justify-between w-full">
                 <!-- Websites -->
@@ -64,14 +72,6 @@
                         <span class="relative text-white">Taboo Websites</span>
                     </h2>
                     <div id="tabooWebsitesContainer" class="flex flex-col space-y-2">
-                        <!-- Template to insert dynamic content with js -->
-                        <template id="tabooWebsiteTemplate">
-                            <div class="flex space-x-2 items-center p-2 bg-white border border-gray-200 rounded-md">
-                                <p tabooDomain class="flex-1 font-medium text-base text-gray-800 decoration-pink-500"></p>
-                                <svg deleteIcon class="h-6 w-6 text-red-500 hover:text-red-700" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">  <path stroke="none" d="M0 0h24v24H0z"/>  <line x1="4" y1="7" x2="20" y2="7" />  <line x1="10" y1="11" x2="10" y2="17" />  <line x1="14" y1="11" x2="14" y2="17" />  <path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" /></svg>
-                                <svg editIcon class="h-6 w-6 text-yellow-500 hover:text-yellow-600" width="24"  height="24" viewBox="0 0 24 24"  xmlns="http://www.w3.org/2000/svg"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round">  <path d="M12 20h9" />  <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" /></svg>
-                            </div>
-                        </template>
                     </div>
                 </div>
                 <!-- Tabs -->

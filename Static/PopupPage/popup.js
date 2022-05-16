@@ -5,7 +5,9 @@ document.addEventListener("DOMContentLoaded", (_) => {
     // Template for taboo websites
     tabooTemplate = document.getElementById("tabooWebsiteTemplate").content;
     chrome.storage.sync.get("tabooWebsites").then((result) => {
-        extendTabooList(result.tabooWebsites);
+        if (result.tabooWebsites) {
+            extendTabooList(result.tabooWebsites);
+        }
     });
 
     let tabooInputElement = document.getElementById("tabooInput");
@@ -14,8 +16,8 @@ document.addEventListener("DOMContentLoaded", (_) => {
 
     let tabooButtonElement = document.getElementById("addTabooButton");
     // On add button click new taboo domain added
-    tabooButtonElement.addEventListener("click", async() => {
-        await onNewTabooAdded(tabooInputElement.value);
+    tabooButtonElement.addEventListener("click", () => {
+        onNewTabooAdded(tabooInputElement.value);
     });
     // Tabs system
     let ulMenuElement = document.getElementById("tabsMenu");
@@ -29,7 +31,7 @@ document.addEventListener("DOMContentLoaded", (_) => {
             "content": document.querySelector(`div[data-tab="${currentTabNum}"]`)
         };
         // Changing tabs on click
-        tabLink.addEventListener("click", (event) => {
+        tabLink.addEventListener("click", (_) => {
             setActiveTab(currentTabNum, tabsDict);
         });
     }
@@ -50,8 +52,23 @@ function extendTabooList(tabooWebsites) {
         deleteIconElement.addEventListener("mouseout", (_) => {
             websiteElement.classList.remove("line-through");
         });
+        deleteIconElement.addEventListener("click", async(_) => {
+            await onTabooDeleted(website);
+        });
 
         tabooContainer.appendChild(tabooItem);
+    }
+}
+
+function removeTabooFromList(tabooWebsite) {
+    const tabooContainer = document.getElementById("tabooWebsitesContainer");
+    // Looping through all taboo items to find item to delete
+    for (const tabooItem of tabooContainer.children) {
+        let currentWebsite = tabooItem.querySelector("[tabooDomain]").textContent;
+        if (currentWebsite === tabooWebsite) {
+            tabooContainer.removeChild(tabooItem);
+            return;
+        }
     }
 }
 
@@ -77,21 +94,36 @@ function setActiveTab(activatedTabNum, tabsDict) {
     activatedTabContent.classList.replace("hidden", "active");
 }
 
-async function tabooInputKeyDown(event) {
+function tabooInputKeyDown(event) {
     if (event.key === "Enter") {
-        await onNewTabooAdded(event.target.value);
+        onNewTabooAdded(event.target.value);
     }
 }
 
-async function onNewTabooAdded(tabooDomain) {
-    let tooShortErrorElement = document.getElementById("tooShortErrorText");
+function onNewTabooAdded(tabooDomain) {
+    let inputErrorElement = document.getElementById("inputErrorText");
     // Validation
     if (tabooDomain.length < 4) {
-        tooShortErrorElement.classList.remove("hidden");
+        inputErrorElement.innerHTML = `Taboo domain is <span class="font-bold">too short</span>`;
+        inputErrorElement.classList.remove("hidden");
         return;
     }
-    tooShortErrorElement.classList.add("hidden");
-    //
-    await chrome.runtime.sendMessage({"event": "onNewTabooAdded", "data": [tabooDomain]});
-    extendTabooList([tabooDomain]);
+    // Sending message to background.js
+    chrome.runtime.sendMessage({"event": "onNewTabooAdded", "data": [tabooDomain]}).then((response) => {
+        // true if domain doesn't exist already
+        if (response) {
+            extendTabooList([tabooDomain]);
+            inputErrorElement.classList.add("hidden");
+        }
+        else {
+            inputErrorElement.innerHTML = `Similar taboo domain <span class="font-bold">already exists</span>`;
+            inputErrorElement.classList.remove("hidden");
+        }
+    });
+}
+
+function onTabooDeleted(deletedTaboo) {
+    chrome.runtime.sendMessage({"event": "onTabooDeleted", "data": [deletedTaboo]}).then((_) => {
+        removeTabooFromList(deletedTaboo);
+    });
 }
