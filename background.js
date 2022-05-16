@@ -21,10 +21,11 @@ const customEventHandlers = {
     "onBreakTimeStart": [],
     "onBreakTimeEnd": []
 }
-initOnStartup();
+// FIXME: Is there any reason why should I keep .then?
+initOnStartup().then(_ => _);
 
 
-function initOnStartup() {
+async function initOnStartup() {
     // Loading data from storage
 
     // part 1
@@ -33,18 +34,9 @@ function initOnStartup() {
     // part 2
     // TODO: better solution for loading variables from storage (this one looks like shit)
     //  maybe smth like C# reflections, idk (don't forget about security since you can change any variable)
-    chrome.storage.sync.get(["tabooWebsites", "foreverExcludedTabsIds", "oneWayExcludedTabsIds"],
-        (result) => {
-            if (result.tabooWebsites !== undefined) {
-                tabooWebsites = result.tabooWebsites;
-            }
-            if (result.foreverExcludedTabsIds !== undefined) {
-                foreverExcludedTabsIds = result.foreverExcludedTabsIds;
-            }
-            if (result.oneWayExcludedTabsIds !== undefined) {
-                oneWayExcludedTabsIds = result.oneWayExcludedTabsIds;
-            }
-        });
+    tabooWebsites = await loadSyncStorageItem("tabooWebsites", []);
+    foreverExcludedTabsIds = await loadSyncStorageItem("foreverExcludedTabsIds", []);
+    oneWayExcludedTabsIds = await loadSyncStorageItem("oneWayExcludedTabsIds", []);
     // Event handlers for chrome "stuff"
     chrome.tabs.onUpdated.addListener(onTabUpdated);
     chrome.tabs.onRemoved.addListener(onTabUpdated);
@@ -69,6 +61,19 @@ function isTabooTab(tab) {
         }
     }
     return false;
+}
+
+
+async function loadSyncStorageItem(key, defaultValue) {
+    return new Promise((resolve, _) => {
+        chrome.storage.sync.get(key, resolve)
+    }).then((result) => {
+        if (result[key] === undefined) {
+            chrome.storage.sync.set({key: defaultValue});
+            return defaultValue;
+        }
+        return result[key];
+    });
 }
 
 
@@ -98,7 +103,6 @@ function onNewTabooAdded(tabooDomain) {
 function onTabRemoved(tabId, removedInfo) {
     let index = oneWayExcludedTabsIds.indexOf(tabId);
     if (index !== -1) {
-        // TODO: test if splice works
         oneWayExcludedTabsIds.splice(index);
     }
 }
@@ -129,6 +133,7 @@ function onTabUpdated(tabId, changedInfo, tab) {
 }
 // endregion
 
+
 // region Work session timer
 function disableWorkSessionTimer() {
     clearInterval(workTimerId);
@@ -151,6 +156,8 @@ function workSessionInterval() {
     }).then((_) => _);
     // During break work interval is stopped
     clearInterval(workTimerId);
+
+    // Starting break only after button was clicked
     // After break, it's started again
     breakTimeoutId = setTimeout(() => {
         workTimerId = setInterval(workSessionInterval, workTimeSeconds);

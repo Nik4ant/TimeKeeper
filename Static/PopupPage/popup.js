@@ -1,4 +1,13 @@
+let tabooTemplate;
+
+
 document.addEventListener("DOMContentLoaded", (_) => {
+    // Template for taboo websites
+    tabooTemplate = document.getElementById("tabooWebsiteTemplate").content;
+    chrome.storage.sync.get("tabooWebsites").then((result) => {
+        extendTabooList(result.tabooWebsites);
+    });
+
     let tabooInputElement = document.getElementById("tabooInput");
     // If enter is pressed then new taboo domain added
     tabooInputElement.addEventListener("keydown", tabooInputKeyDown);
@@ -24,10 +33,27 @@ document.addEventListener("DOMContentLoaded", (_) => {
             setActiveTab(currentTabNum, tabsDict);
         });
     }
-
-    // Showing menu with all taboo websites
-    // TODO:
 });
+
+function extendTabooList(tabooWebsites) {
+    const tabooContainer = document.getElementById("tabooWebsitesContainer");
+
+    for (const website of tabooWebsites) {
+        // Creating item
+        const tabooItem = document.importNode(tabooTemplate, true);
+        let websiteElement = tabooItem.querySelector("[tabooDomain]");
+        let deleteIconElement = tabooItem.querySelector("[deleteIcon]");
+        websiteElement.textContent = website;
+        deleteIconElement.addEventListener("mouseover", (_) => {
+            websiteElement.classList.add("line-through");
+        });
+        deleteIconElement.addEventListener("mouseout", (_) => {
+            websiteElement.classList.remove("line-through");
+        });
+
+        tabooContainer.appendChild(tabooItem);
+    }
+}
 
 function setActiveTab(activatedTabNum, tabsDict) {
     // Deactivating everything and activating needed tab later
@@ -58,8 +84,14 @@ async function tabooInputKeyDown(event) {
 }
 
 async function onNewTabooAdded(tabooDomain) {
-    // Validating string
-    if (tabooDomain) {
-        await chrome.runtime.sendMessage({"event": "onNewTabooAdded", "data": [tabooDomain]});
+    let tooShortErrorElement = document.getElementById("tooShortErrorText");
+    // Validation
+    if (tabooDomain.length < 4) {
+        tooShortErrorElement.classList.remove("hidden");
+        return;
     }
+    tooShortErrorElement.classList.add("hidden");
+    //
+    await chrome.runtime.sendMessage({"event": "onNewTabooAdded", "data": [tabooDomain]});
+    extendTabooList([tabooDomain]);
 }
