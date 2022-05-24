@@ -1,10 +1,13 @@
 {
-    "name": "TimeKeeper v2.0",
+    "name": "TimeKeeper",
     "description": "Help you to achieve effective work/rest balance and reduce procrastination time to 0",
-    "version": "0.1",
+    "version": "0.2",
     "manifest_version": 3,
     "background": {
         "service_worker": "background.js"
+    },
+    "content_scripts": {
+
     },
     "permissions": [
         "storage",
@@ -14,6 +17,6 @@
         "scripting"
     ],
     "action": {
-        "default_popup": "Static/PopupPage/popup.html"
+        "default_popup": "PopupPage/popup.html"
     }
 }
