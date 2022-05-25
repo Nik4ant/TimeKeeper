@@ -1,6 +1,1 @@
-/*
-WARNING! Never ever add here: @tailwind tag because this breaks everything for some reason
-(Tailwind classes inside .html files stop working)
-*/
-
 @import "base.css";
