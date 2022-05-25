@@ -67,7 +67,8 @@ module.exports = {
                 {
                     from: "./src/Static",
                     // Copying all files except for files that are processed using loaders
-                    // Note (Nik4ant): This might be a bad decision, but I don't like page content separately
+                    // Note (Nik4ant): This might be a bad decision, but I don't want to
+                    // keep pages content separately because of .html files
                     filter: (resourcePath) => {
                         const extensionsToFilter = ["ts", "js"];
                         const fileExt = path.extname(resourcePath).replace('.', '');

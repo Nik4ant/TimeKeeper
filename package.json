@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "description": "",
   "scripts": {
-    "build": "webpack --config configs/webpack/webpack.prod.js",
-    "dev": "webpack --config configs/webpack/webpack.dev.js"
+    "build": "cross-env NODE_ENV=production webpack --config configs/webpack/webpack.prod.js",
+    "dev": "cross-env NODE_ENV=development webpack --config configs/webpack/webpack.dev.js"
   },
   "keywords": [],
   "author": "Nik4ant",
@@ -18,7 +18,10 @@
     "autoprefixer": "^10.4.7",
     "babel-loader": "^8.2.5",
     "copy-webpack-plugin": "^11.0.0",
+    "cross-env": "^7.0.3",
     "css-loader": "^6.7.1",
+    "cssnano": "^5.1.9",
+    "cssnano-preset-advanced": "^5.3.5",
     "mini-css-extract-plugin": "^2.6.0",
     "postcss": "^8.4.14",
     "postcss-import": "^14.1.0",
