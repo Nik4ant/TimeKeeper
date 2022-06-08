@@ -5,6 +5,9 @@ const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 const projectRoot = path.resolve(__dirname, "..", "..")
 
 module.exports = {
+    experiments: {
+        topLevelAwait: true,
+    },
     entry: {
         background: path.resolve(projectRoot, "src", "background.ts"),
         popup: path.resolve(projectRoot, "src", "Static", "PopupPage", "popup.tsx"),
