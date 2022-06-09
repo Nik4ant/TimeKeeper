@@ -1,6 +1,6 @@
 import TabooManager from "./Managers/taboo-manager";
 import ExcludedTabsManager from "./Managers/excluded-tabs-manager";
-import {CommandMessage} from "./common-structures";
+import {ChromeMessageContainer} from "./common-structures";
 
 
 await startUpInit();
@@ -19,8 +19,8 @@ async function startUpInit() {
 }
 
 
-function onNewChromeMessage(message: CommandMessage, sender: chrome.runtime.MessageSender,
-                                  sendResponse: (response?: any) => void) {
+function onNewChromeMessage(message: ChromeMessageContainer, sender: chrome.runtime.MessageSender,
+                            sendResponse: (response?: any) => void) {
     if (message.command === "addTaboo") {
         sendResponse(TabooManager.Add(message.args[0]));
     }

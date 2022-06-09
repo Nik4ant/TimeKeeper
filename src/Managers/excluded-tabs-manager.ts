@@ -22,6 +22,11 @@ export default class ExcludedTabsManager {
 
     static async Init(): Promise<void> {
         [this._excludedTabsGetter, this._excludedTabsSetter] = await createStorageSignal<{[tabId: number]: ExcludedTabInfo}>("excludedTabs", {});
+        // Note: When browser is closed and opened again some tab ids can change
+        // FIXME: this is a temporary solution because the whole "excluded thingy" doesn't work
+        //  REMOVE THIS LATER!!!!!!!!!!!!!!!!!!!!!!!!
+        //  (After "excluded thingy" will be redesigned)
+        this._EliminateDeadTabsOnInit();
     }
 
     static UpdateExcludedTabsWithTaboos(taboos: string[]): void {
@@ -52,6 +57,23 @@ export default class ExcludedTabsManager {
             for (const deadTabId of noLongerExistingTabs) {
                 delete result[Number(deadTabId)];
             }
+            this._excludedTabsSetter(result);
+        });
+    }
+
+    static _EliminateDeadTabsOnInit() {
+        chrome.tabs.query({}).then((tabs) => {
+            let result = this._excludedTabsGetter();
+            let noLongerExistingTabs = new Set(Object.keys(result));
+
+            for (const tab of tabs) {
+                // (toString is used because Object.keys() returns string[])
+                noLongerExistingTabs.delete(tab.id.toString())
+            }
+            for (const deadTab of noLongerExistingTabs) {
+                delete result[Number(deadTab)];
+            }
+
             this._excludedTabsSetter(result);
         });
     }

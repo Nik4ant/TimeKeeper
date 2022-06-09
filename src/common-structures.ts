@@ -8,8 +8,7 @@ export class ValidationResult {
     }
 }
 
-// TODO: rename later (ChromeMessage or smth like that)
-export class CommandMessage {
+export class ChromeMessageContainer {
     command: string;
     args?: any[];
 

@@ -1,10 +1,10 @@
-import { RiSystemDeleteBin2Line } from "solid-icons/ri";
-import { For } from "solid-js/web";
-import { createSignal, Accessor } from "solid-js";
+import {RiSystemDeleteBin2Line} from "solid-icons/ri";
+import {For} from "solid-js/web";
+import {createSignal} from "solid-js";
 
-import { ValidationResult, CommandMessage } from "../../common-structures";
-import { connectToStorageSignal } from "../../storage";
-import { ExcludedTabInfo } from "../../Managers/excluded-tabs-manager";
+import {ValidationResult, ChromeMessageContainer} from "../../common-structures";
+import {connectToStorageSignal} from "../../storage";
+import {ExcludedTabInfo} from "../../Managers/excluded-tabs-manager";
 
 
 function ExcludedTab(props) {
@@ -38,8 +38,8 @@ function ExcludedTab(props) {
 function TabooWebsite(props) {
     function removeTaboo(taboo) {
         // Sending message to extension background script
-        const removeCommand = new CommandMessage("removeTaboo", [taboo]);
-        chrome.runtime.sendMessage(removeCommand);
+        const removeTabooMessage = new ChromeMessageContainer("removeTaboo", [taboo]);
+        chrome.runtime.sendMessage(removeTabooMessage);
     }
 
     const tabooWebsite = (<p class="flex-1 font-medium text-base text-gray-800 decoration-pink-500 decoration-[3]">{props.website}</p> as HTMLParagraphElement);
@@ -66,8 +66,8 @@ function TabooInput() {
     function addTaboo(taboo: string): void {
         const formattedTaboo = taboo.replace(/\s+/g, '');
         // Sending message to extension background script
-        const addCommand = new CommandMessage("addTaboo", [formattedTaboo]);
-        chrome.runtime.sendMessage(addCommand, (result: ValidationResult) => {
+        const addTabooMessage = new ChromeMessageContainer("addTaboo", [formattedTaboo]);
+        chrome.runtime.sendMessage(addTabooMessage, (result: ValidationResult) => {
             if (!result.isOk) {
                 errorMessage.innerHTML = result.htmlErrorMessage;
             }
@@ -78,7 +78,7 @@ function TabooInput() {
         });
     }
 
-    // TODO: make error message separate component (as a popup that can be closed)
+    // TODO: make error message separate component? (as a popup that can be closed)
     const errorMessage = (<p class="mt-2 text-sm text-red-600" /> as HTMLParagraphElement);
     const tabooInput = (<input type="text" name="tabooInput" class="flex-1 p-2.5 text-lg rounded-none rounded-r-lg border bg-gray-50 text-gray-900 border-gray-300 focus:outline-none focus:ring-violet-500 focus:border-violet-500" /> as HTMLInputElement);
     tabooInput.addEventListener("keyup", (e) => {
