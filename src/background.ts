@@ -15,9 +15,9 @@ async function startUpInit() {
     // region Chrome event handlers
     chrome.runtime.onMessage.addListener(onNewChromeMessage);
     chrome.tabs.onRemoved.addListener(onTabRemoved);
+    chrome.tabs.onUpdated.addListener(onTabUpdated);
     // endregion
 }
-
 
 function onNewChromeMessage(message: ChromeMessageContainer, sender: chrome.runtime.MessageSender,
                             sendResponse: (response?: any) => void) {
@@ -35,5 +35,16 @@ function onTabRemoved(tabId: number, _: chrome.tabs.TabRemoveInfo): void {
     // Remove tab if it is closed and was excluded "one way"
     if (excludedTabs[tabId] && !excludedTabs[tabId].isForever) {
         ExcludedTabsManager.Remove(tabId);
+    }
+}
+
+
+function onTabUpdated(tabId: number, changeInfo: chrome.tabs.TabChangeInfo, tab: chrome.tabs.Tab): void {
+    if (changeInfo.status === "complete" && TabooManager.IsTaboo(tab)) {
+        chrome.tabs.create({
+            url: chrome.runtime.getURL("./TabooPage/taboo.html"),
+            active: true
+        });
+        chrome.tabs.remove(tab.id);
     }
 }

@@ -37,6 +37,15 @@ export default class TabooManager {
         return new ValidationResult(true);
     }
 
+    static IsTaboo(tab: chrome.tabs.Tab): boolean {
+        for (const tabooDomain of this._tabooWebsitesGetter()) {
+            if (tab.url.indexOf(tabooDomain) !== -1) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     static Get(): string[] {
         return this._tabooWebsitesGetter();
     }

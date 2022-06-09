@@ -11,6 +11,7 @@ module.exports = {
     entry: {
         background: path.resolve(projectRoot, "src", "background.ts"),
         popup: path.resolve(projectRoot, "src", "Static", "PopupPage", "popup.tsx"),
+        taboo: path.resolve(projectRoot, "src", "Static", "TabooPage", "taboo.tsx"),
     },
     resolve: {
         extensions: [".ts", ".js", ".tsx", ".tsx"],

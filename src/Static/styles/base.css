@@ -1,3 +1,13 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+    --primary-color: #006397;
+    --primary-on-color: #ffffff;
+}
+/* TODO: continue this custom method (build in tailwind sucks) */
+.dark {
+    --primary-color: #93ccff;
+    --primary-on-color: #381e72;
+}
