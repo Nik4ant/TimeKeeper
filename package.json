@@ -24,6 +24,7 @@
     "css-loader": "^6.7.1",
     "cssnano": "^5.1.9",
     "cssnano-preset-advanced": "^5.3.5",
+    "daisyui": "^2.17.0",
     "mini-css-extract-plugin": "^2.6.0",
     "postcss": "^8.4.14",
     "postcss-import": "^14.1.0",

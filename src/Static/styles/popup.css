@@ -2,5 +2,5 @@
 
 
 .navbar-icon {
-    @apply self-center text-primary-light dark:text-primary-dark;
+    @apply self-center text-primary
 }

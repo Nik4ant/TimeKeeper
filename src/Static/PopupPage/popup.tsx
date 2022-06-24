@@ -34,11 +34,11 @@ function Navbar({tabSetter}) {
 
     return (
         <>
-            <div class="bg-white border-gray-200 px-4 py-2.5">
+            <div class="bg-primary-content border-base-200 px-4 py-2.5">
                 <div class="w-full container flex flex-row space-x-16 justify-between items-center">
                     <TimeKeeperLogo />
-                    <div class="border-b border-gray-200 basis-1/3">
-                        <ul class="flex text-sm font-medium text-center -mb-px text-gray-500">
+                    <div class="border-b border-base-200 basis-1/3">
+                        <ul class="flex text-sm font-medium text-center -mb-px">
                             <NavbarTab tabNum="1" text="Taboo" icon={<BsShieldLockFill class="navbar-icon" size={24} />} />
                             <NavbarTab tabNum="2" text="Pomodoro" icon={<BsShieldLockFill class="navbar-icon" size={24} />} />
                         </ul>
@@ -73,4 +73,4 @@ function PopupRoot() {
 }
 
 
-render(() => <PopupRoot />, document.getElementById("root") as HTMLElement);
+render(() => <PopupRoot data-theme="night" />, document.getElementById("root") as HTMLElement);

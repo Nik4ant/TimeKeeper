@@ -8,15 +8,9 @@ import { createStorageSignal } from "../storage";
 export default class TabooManager {
     static _tabooWebsitesGetter: Accessor<string[]>;
     static _tabooWebsitesSetter: Setter<string[]>;
-    static _onTabooValueChanged: (newValue: string[]) => void;
 
-    static async Init(onTabooValueChanged: (newValue: string[]) => void): Promise<void> {
+    static async Init(): Promise<void> {
         [this._tabooWebsitesGetter, this._tabooWebsitesSetter] = await createStorageSignal<string[]>("tabooWebsites", []);
-        this._onTabooValueChanged = onTabooValueChanged;
-    }
-
-    static _NotifyOnValueChange() {
-        this._onTabooValueChanged(this._tabooWebsitesGetter());
     }
 
     static ValidateTaboo(tabooDomain): ValidationResult {
@@ -54,7 +48,6 @@ export default class TabooManager {
         const validationResult = this.ValidateTaboo(newTabooDomain);
         if (validationResult.isOk) {
             this._tabooWebsitesSetter([...this._tabooWebsitesGetter(), newTabooDomain]);
-            this._NotifyOnValueChange();
         }
 
         return validationResult;
@@ -67,7 +60,6 @@ export default class TabooManager {
         if (index !== -1) {
             currentTaboos.splice(index, 1);
             this._tabooWebsitesSetter(currentTaboos);
-            this._NotifyOnValueChange();
         }
     }
 }

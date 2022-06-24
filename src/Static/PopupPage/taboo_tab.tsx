@@ -4,19 +4,18 @@ import {createSignal} from "solid-js";
 
 import {ValidationResult, ChromeMessageContainer} from "../../common-structures";
 import {connectToStorageSignal} from "../../storage";
-import {ExcludedTabInfo} from "../../Managers/excluded-tabs-manager";
 
 
 function ExcludedTab(props) {
-    function deleteExcludedTab(tabId) {
-
+    function removeExcludedTab(tabId) {
+        // Sending message to extension background script
+        const removeExcludedTab = new ChromeMessageContainer("removeExcludedTab", [tabId]);
+        chrome.runtime.sendMessage(removeExcludedTab);
     }
 
     const excludedTab = (<p class="flex-1 font-medium text-base text-gray-800 decoration-pink-500 decoration-[3]">{props.tabId}</p> as HTMLParagraphElement);
-    const isForeverCheckbox = (<input class="form-check-input appearance-none h-4 w-4 border border-gray-300 rounded-sm bg-white checked:bg-blue-600 checked:border-blue-600 focus:outline-none transition duration-200 mt-1 align-top bg-no-repeat bg-center bg-contain float-left mr-2 cursor-pointer" type="checkbox" value="" /> as HTMLInputElement);
-    isForeverCheckbox.checked = props.isForever;
     const deleteIcon = (<RiSystemDeleteBin2Line size={24} class={"text-red-500 hover:text-red-700"}
-                                                onClick={_ => deleteExcludedTab(props.tabId)} /> as HTMLOrSVGImageElement);
+                                                onClick={_ => removeExcludedTab(props.tabId)} /> as HTMLOrSVGImageElement);
     // Special hover effect...
     deleteIcon.addEventListener("mouseover", (_) => {
         excludedTab.classList.add("line-through")
@@ -28,7 +27,6 @@ function ExcludedTab(props) {
         <>
             <div class="flex space-x-2 items-center m-2 p-2.5 bg-white border border-gray-200 rounded-md">
                 {excludedTab}
-                {isForeverCheckbox}
                 {deleteIcon}
             </div>
         </>
@@ -78,7 +76,6 @@ function TabooInput() {
         });
     }
 
-    // TODO: make error message separate component? (as a popup that can be closed)
     const errorMessage = (<p class="mt-2 text-sm text-red-600" /> as HTMLParagraphElement);
     const tabooInput = (<input type="text" name="tabooInput" class="flex-1 p-2.5 text-lg rounded-none rounded-r-lg border bg-gray-50 text-gray-900 border-gray-300 focus:outline-none focus:ring-violet-500 focus:border-violet-500" /> as HTMLInputElement);
     tabooInput.addEventListener("keyup", (e) => {
@@ -115,8 +112,8 @@ export default function TabooTabContent() {
         tabooSetter(storageGetter());
     });
     // Signal to excluded tabs in storage
-    let [excludedGetter, excludedSetter] = createSignal<{[tabId: number]: ExcludedTabInfo}>({});
-    connectToStorageSignal<{[tabId: number]: ExcludedTabInfo}>("excludedTabs").then((storageGetter) => {
+    let [excludedGetter, excludedSetter] = createSignal<Number[]>([]);
+    connectToStorageSignal<Number[]>("excludedTabs").then((storageGetter) => {
         excludedGetter = storageGetter;
         excludedSetter(storageGetter());
     });
@@ -137,7 +134,7 @@ export default function TabooTabContent() {
                     <h1 class="text-xl font-semibold text-center">Excluded tabs</h1>
                     <div class="p-2">
                         <For each={Object.entries(excludedGetter())}>
-                            {([tabId, excludedInfo], _) => <ExcludedTab tabId={tabId} isForever={excludedInfo.isForever}/>}
+                            {(tabId, _) => <ExcludedTab tabId={tabId} />}
                         </For>
                     </div>
                 </div>
