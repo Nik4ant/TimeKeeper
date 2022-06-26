@@ -40,8 +40,8 @@ function TabooWebsite(props) {
         chrome.runtime.sendMessage(removeTabooMessage);
     }
 
-    const tabooWebsite = (<p class="flex-1 font-medium text-base text-gray-800 decoration-pink-500 decoration-[3]">{props.website}</p> as HTMLParagraphElement);
-    const deleteIcon = (<RiSystemDeleteBin2Line size={24} class={"text-red-500 hover:text-red-700"}
+    const tabooWebsite = (<p class="flex-1 font-medium text-base text-base-content decoration-error decoration-4">{props.website}</p> as HTMLParagraphElement);
+    const deleteIcon = (<RiSystemDeleteBin2Line size={24} class={"text-error"}
                                                 onClick={_ => removeTaboo(props.website)} /> as HTMLOrSVGImageElement);
     // Special hover effect...
     deleteIcon.addEventListener("mouseover", (_) => {
@@ -52,7 +52,7 @@ function TabooWebsite(props) {
     });
     return (
         <>
-            <div class="flex space-x-2 items-center m-2 p-2.5 bg-white border border-gray-200 rounded-md">
+            <div class="flex space-x-2 items-center m-2 p-2.5 bg-base-300 border border-accent-focus rounded-md">
                 {tabooWebsite}
                 {deleteIcon}
             </div>
@@ -66,18 +66,25 @@ function TabooInput() {
         // Sending message to extension background script
         const addTabooMessage = new ChromeMessageContainer("addTaboo", [formattedTaboo]);
         chrome.runtime.sendMessage(addTabooMessage, (result: ValidationResult) => {
+            // FIXME: the whole design implementation sucks so much...
             if (!result.isOk) {
                 errorMessage.innerHTML = result.htmlErrorMessage;
+                // Different outline color for input on error
+                tabooInput.classList.add("border-error");
+                tabooInput.classList.remove("focus:border-primary-focus");
             }
             else {
                 errorMessage.innerHTML = "";
                 tabooInput.value = "";
+                tabooInput.classList.remove("border-error");
+                tabooInput.classList.add("focus:border-primary-focus");
             }
         });
     }
 
-    const errorMessage = (<p class="mt-2 text-sm text-red-600" /> as HTMLParagraphElement);
-    const tabooInput = (<input type="text" name="tabooInput" class="flex-1 p-2.5 text-lg rounded-none rounded-r-lg border bg-gray-50 text-gray-900 border-gray-300 focus:outline-none focus:ring-violet-500 focus:border-violet-500" /> as HTMLInputElement);
+    const errorMessage = (<p class="mt-2 text-sm text-error" /> as HTMLParagraphElement);
+
+    const tabooInput = (<input type="text" name="tabooInput" class="input bg-base-300 border-base-content text-base-content border-2 border-l-4 rounded-l-none flex-1 p-1.5 text-lg focus:outline-none focus:border-primary-focus" /> as HTMLInputElement);
     tabooInput.addEventListener("keyup", (e) => {
         if (e.key === "Enter") {
             addTaboo(tabooInput.value);
@@ -86,17 +93,13 @@ function TabooInput() {
     return (
         <>
             <div class="flex flex-col space-y-1 items-center">
-                <label for="tabooInput" class="p-1.5 text-base font-medium text-gray-900">Add taboo domain:</label>
+                <label for="tabooInput" class="p-1.5 text-lg text-base-content font-medium">Add taboo domain:</label>
                 <div class="flex">
-                    <span class="inline-flex items-center px-3 text-base text-gray-900 bg-gray-200 border border-r-0 border-gray-300 rounded-l-md">
+                    <span class="inline-flex items-center px-3 text-base text-base-content bg-base-300 border-2 border-r-0 border-base-content rounded-l-md">
                     https://
                     </span>
                     {tabooInput}
-                    <button onClick={_ => addTaboo(tabooInput.value)} class="items-center justify-center mx-2 p-0.5 mr-2 overflow-hidden text-sm font-medium text-gray-900 rounded-lg group bg-gradient-to-br from-purple-600 to-blue-500 group-hover:from-purple-600 group-hover:to-blue-500 hover:text-white dark:text-white focus:ring-4 focus:outline-none focus:ring-blue-300 dark:focus:ring-blue-800">
-                        <span class="relative px-5 py-3.5 transition-all ease-in duration-75 bg-white dark:bg-gray-900 rounded-md group-hover:bg-opacity-0">
-                        Add
-                        </span>
-                    </button>
+                    <button onClick={_ => addTaboo(tabooInput.value)} class="btn btn-primary items-center justify-center mx-2 rounded-box">Add</button>
                 </div>
                 {errorMessage}
             </div>
@@ -123,7 +126,7 @@ export default function TabooTabContent() {
             <TabooInput />
             <div class="p-2 flex justify-between">
                 <div>
-                    <h1 class="text-xl font-semibold text-center">Taboo domains</h1>
+                    <h1 class="text-xl font-semibold text-center text-base-content">Taboo domains</h1>
                     <div class="p-2">
                         <For each={tabooGetter()}>
                             {(tabooWebsite, _) => <TabooWebsite website={tabooWebsite}/>}

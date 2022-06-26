@@ -11,15 +11,16 @@ import {BsShieldLockFill} from 'solid-icons/bs';
 import {createSignal} from "solid-js";
 
 
-function Navbar({tabSetter}) {
+function Navbar({tabSetter, tabGetter}) {
     function NavbarTab(props) {
+        // TODO: Special color for selected tab (PROPER IMPLEMENTATION. Maybe use effect thingies from solidjs)
         // Note: props.icon is component
         const result = (
             <>
-                <li class="mr-2">
+                <li class="border-b border-base-content">
                     <div class="inline-flex space-x-2 p-2">
                         {props.icon}
-                        <p>{props.text}</p>
+                        <p class="text-base-content">{props.text}</p>
                     </div>
                 </li>
             </>
@@ -34,11 +35,11 @@ function Navbar({tabSetter}) {
 
     return (
         <>
-            <div class="bg-primary-content border-base-200 px-4 py-2.5">
+            <div class="bg-base-200 px-4 py-2.5">
                 <div class="w-full container flex flex-row space-x-16 justify-between items-center">
                     <TimeKeeperLogo />
-                    <div class="border-b border-base-200 basis-1/3">
-                        <ul class="flex text-sm font-medium text-center -mb-px">
+                    <div class="basis-1/3">
+                        <ul class="flex flex-row space-x-2 text-sm font-medium text-center">
                             <NavbarTab tabNum="1" text="Taboo" icon={<BsShieldLockFill class="navbar-icon" size={24} />} />
                             <NavbarTab tabNum="2" text="Pomodoro" icon={<BsShieldLockFill class="navbar-icon" size={24} />} />
                         </ul>
@@ -55,9 +56,9 @@ function PopupRoot() {
 
     return (
         <>
-            <div class="w-full y-full bg-no-repeat bg-cover bg-gradient-to-br from-[#ECE9E6] to-[#F1F1F1] min-w-max">
+            <div class="w-full y-full bg-no-repeat bg-cover bg-base-100 min-w-max">
                 <div>
-                    <Navbar tabSetter={setCurrentTab} />
+                    <Navbar tabSetter={setCurrentTab} tabGetter={currentTab} />
                     <Switch>
                         <Match when={currentTab() === "1"}>
                             <TabooTabContent />
