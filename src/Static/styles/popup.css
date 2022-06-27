@@ -2,5 +2,5 @@
 
 
 .navbar-icon {
-    @apply self-center text-accent
+    @apply self-center text-accent;
 }

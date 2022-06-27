@@ -10,10 +10,8 @@ import {Match, render, Switch} from "solid-js/web";
 import {BsShieldLockFill} from 'solid-icons/bs';
 import {createSignal} from "solid-js";
 
-
-function Navbar({tabSetter, tabGetter}) {
+function Navbar({tabSetter}) {
     function NavbarTab(props) {
-        // TODO: Special color for selected tab (PROPER IMPLEMENTATION. Maybe use effect thingies from solidjs)
         // Note: props.icon is component
         const result = (
             <>
@@ -58,7 +56,7 @@ function PopupRoot() {
         <>
             <div class="w-full y-full bg-no-repeat bg-cover bg-base-100 min-w-max">
                 <div>
-                    <Navbar tabSetter={setCurrentTab} tabGetter={currentTab} />
+                    <Navbar tabSetter={setCurrentTab} />
                     <Switch>
                         <Match when={currentTab() === "1"}>
                             <TabooTabContent />

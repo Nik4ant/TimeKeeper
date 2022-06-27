@@ -6,33 +6,6 @@ import {ValidationResult, ChromeMessageContainer} from "../../common-structures"
 import {connectToStorageSignal} from "../../storage";
 
 
-function ExcludedTab(props) {
-    function removeExcludedTab(tabId) {
-        // Sending message to extension background script
-        const removeExcludedTab = new ChromeMessageContainer("removeExcludedTab", [tabId]);
-        chrome.runtime.sendMessage(removeExcludedTab);
-    }
-
-    const excludedTab = (<p class="flex-1 font-medium text-base text-gray-800 decoration-pink-500 decoration-[3]">{props.tabId}</p> as HTMLParagraphElement);
-    const deleteIcon = (<RiSystemDeleteBin2Line size={24} class={"text-red-500 hover:text-red-700"}
-                                                onClick={_ => removeExcludedTab(props.tabId)} /> as HTMLOrSVGImageElement);
-    // Special hover effect...
-    deleteIcon.addEventListener("mouseover", (_) => {
-        excludedTab.classList.add("line-through")
-    });
-    deleteIcon.addEventListener("mouseout", (_) => {
-        excludedTab.classList.remove("line-through")
-    });
-    return (
-        <>
-            <div class="flex space-x-2 items-center m-2 p-2.5 bg-white border border-gray-200 rounded-md">
-                {excludedTab}
-                {deleteIcon}
-            </div>
-        </>
-    );
-}
-
 function TabooWebsite(props) {
     function removeTaboo(taboo) {
         // Sending message to extension background script
@@ -114,30 +87,16 @@ export default function TabooTabContent() {
         tabooGetter = storageGetter;
         tabooSetter(storageGetter());
     });
-    // Signal to excluded tabs in storage
-    let [excludedGetter, excludedSetter] = createSignal<Number[]>([]);
-    connectToStorageSignal<Number[]>("excludedTabs").then((storageGetter) => {
-        excludedGetter = storageGetter;
-        excludedSetter(storageGetter());
-    });
 
     return (
         <>
             <TabooInput />
-            <div class="p-2 flex justify-between">
+            <div class="p-2 flex justify-center">
                 <div>
                     <h1 class="text-xl font-semibold text-center text-base-content">Taboo domains</h1>
-                    <div class="p-2">
+                    <div class="p-2 flex flex-col">
                         <For each={tabooGetter()}>
                             {(tabooWebsite, _) => <TabooWebsite website={tabooWebsite}/>}
-                        </For>
-                    </div>
-                </div>
-                <div>
-                    <h1 class="text-xl font-semibold text-center">Excluded tabs</h1>
-                    <div class="p-2">
-                        <For each={Object.entries(excludedGetter())}>
-                            {(tabId, _) => <ExcludedTab tabId={tabId} />}
                         </For>
                     </div>
                 </div>
