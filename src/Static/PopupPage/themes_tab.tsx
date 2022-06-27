@@ -25,7 +25,7 @@ export default function ThemesTabContent() {
         sender.checked = true;
     }
 
-    const supportedThemes = ["light", "night", "forest", "darcula"]
+    const supportedThemes = ["light", "night", "forest", "dracula"]
     const [currentTheme, setCurrentTheme] = createStorageSignal<string>("UITheme", "forest");
 
     return (
