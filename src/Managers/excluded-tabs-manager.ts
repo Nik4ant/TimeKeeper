@@ -1,6 +1,6 @@
 import { Accessor, Setter } from "solid-js";
 
-import { createStorageSignal } from "../storage";
+import { createStorageSignalAsync } from "../storage";
 
 
 // Note: This doesn't look like the best way to use class...
@@ -9,7 +9,7 @@ export default class ExcludedTabsManager {
     static _excludedTabsSetter: Setter<Number[]>;
 
     static async Init(): Promise<void> {
-        [this._excludedTabsGetter, this._excludedTabsSetter] = await createStorageSignal<Number[]>("excludedTabs", []);
+        [this._excludedTabsGetter, this._excludedTabsSetter] = await createStorageSignalAsync<Number[]>("excludedTabs", []);
     }
 
     static Get(): Number[] {

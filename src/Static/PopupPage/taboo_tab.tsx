@@ -3,7 +3,7 @@ import {For} from "solid-js/web";
 import {createSignal} from "solid-js";
 
 import {ValidationResult, ChromeMessageContainer} from "../../common-structures";
-import {connectToStorageSignal} from "../../storage";
+import {connectToStorageSignalAsync} from "../../storage";
 
 
 function TabooWebsite(props) {
@@ -83,7 +83,7 @@ function TabooInput() {
 export default function TabooTabContent() {
     // Signal to taboo websites in storage
     let [tabooGetter, tabooSetter] = createSignal<string[]>([]);
-    connectToStorageSignal<string[]>("tabooWebsites").then((storageGetter) => {
+    connectToStorageSignalAsync<string[]>("tabooWebsites").then((storageGetter) => {
         tabooGetter = storageGetter;
         tabooSetter(storageGetter());
     });
@@ -94,7 +94,7 @@ export default function TabooTabContent() {
             <div class="p-2 flex justify-center">
                 <div>
                     <h1 class="text-xl font-semibold text-center text-base-content">Taboo domains</h1>
-                    <div class="p-2 flex flex-col">
+                    <div class="p-2 grid grid-cols-3">
                         <For each={tabooGetter()}>
                             {(tabooWebsite, _) => <TabooWebsite website={tabooWebsite}/>}
                         </For>

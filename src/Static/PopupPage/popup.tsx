@@ -5,6 +5,7 @@ import "../styles/popup.css";
 import {TimeKeeperLogo} from "../common-components";
 import PomodoroTabContent from "./pomodoro_tab";
 import TabooTabContent from "./taboo_tab";
+import ThemesTabContent from "./themes_tab";
 
 import {Match, render, Switch} from "solid-js/web";
 import {BsShieldLockFill} from 'solid-icons/bs';
@@ -31,6 +32,7 @@ function Navbar({tabSetter}) {
         return result;
     }
 
+    // TODO: I CAN MAKE SELECTED TAB EFFECT USING THIS: https://www.solidjs.com/tutorial/bindings_classlist?solved
     return (
         <>
             <div class="bg-base-200 px-4 py-2.5">
@@ -40,6 +42,7 @@ function Navbar({tabSetter}) {
                         <ul class="flex flex-row space-x-2 text-sm font-medium text-center">
                             <NavbarTab tabNum="1" text="Taboo" icon={<BsShieldLockFill class="navbar-icon" size={24} />} />
                             <NavbarTab tabNum="2" text="Pomodoro" icon={<BsShieldLockFill class="navbar-icon" size={24} />} />
+                            <NavbarTab tabNum="3" text="Themes" icon={<BsShieldLockFill class="navbar-icon" size={24} />} />
                         </ul>
                     </div>
                 </div>
@@ -63,6 +66,9 @@ function PopupRoot() {
                         </Match>
                         <Match when={currentTab() === "2"}>
                             <PomodoroTabContent />
+                        </Match>
+                        <Match when={currentTab() === "3"}>
+                            <ThemesTabContent />
                         </Match>
                     </Switch>
                 </div>

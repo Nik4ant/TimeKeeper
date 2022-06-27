@@ -3,7 +3,7 @@ module.exports = {
       "./src/**/*.{html,css,tsx}"
     ],
     daisyui: {
-        themes: ["light", "dark", "night", "forest"]
+        themes: ["light", "night", "forest", "dracula"]
     },
     plugins: [
       require("daisyui")

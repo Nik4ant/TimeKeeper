@@ -1,7 +1,7 @@
 import { Accessor, Setter } from "solid-js";
 
 import { ValidationResult } from "../common-structures";
-import { createStorageSignal } from "../storage";
+import { createStorageSignalAsync } from "../storage";
 
 
 // Note: This doesn't look like the best way to use class...
@@ -10,7 +10,7 @@ export default class TabooManager {
     static _tabooWebsitesSetter: Setter<string[]>;
 
     static async Init(): Promise<void> {
-        [this._tabooWebsitesGetter, this._tabooWebsitesSetter] = await createStorageSignal<string[]>("tabooWebsites", []);
+        [this._tabooWebsitesGetter, this._tabooWebsitesSetter] = await createStorageSignalAsync<string[]>("tabooWebsites", []);
     }
 
     static ValidateTaboo(tabooDomain): ValidationResult {
