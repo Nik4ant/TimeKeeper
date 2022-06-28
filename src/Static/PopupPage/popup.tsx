@@ -9,7 +9,7 @@ import ThemesTabContent from "./themes_tab";
 
 import {Match, render, Switch} from "solid-js/web";
 import {BsShieldLockFill} from 'solid-icons/bs';
-import {createSignal} from "solid-js";
+import {createSignal, onMount} from "solid-js";
 
 function Navbar({tabSetter}) {
     function NavbarTab(props) {
@@ -54,6 +54,15 @@ function Navbar({tabSetter}) {
 
 function PopupRoot() {
     const [currentTab, setCurrentTab] = createSignal<string>("1");
+    // Loading theme from storage
+    onMount(async() => {
+        const theme = (await chrome.storage.sync.get("UITheme"))["UITheme"];
+        if (theme !== undefined) {
+            // Changing theme attribute
+            document.getElementsByTagName("html")[0].setAttribute("data-theme", theme);
+        }
+    });
+
 
     return (
         <>
@@ -78,4 +87,4 @@ function PopupRoot() {
 }
 
 
-render(() => <PopupRoot data-theme="night" />, document.getElementById("root") as HTMLElement);
+render(() => <PopupRoot />, document.getElementById("root") as HTMLElement);
