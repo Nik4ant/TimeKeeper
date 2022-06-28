@@ -59,7 +59,7 @@ function TabooInput() {
 
     const tabooInput = (<input type="text" name="tabooInput" class="input bg-base-300 border-base-content text-base-content border-2 border-l-4 rounded-l-none flex-1 p-1.5 text-lg focus:outline-none focus:border-primary-focus" /> as HTMLInputElement);
     tabooInput.addEventListener("keyup", (e) => {
-        if (e.key === "Enter") {
+        if (e.key.toLowerCase() === "enter") {
             addTaboo(tabooInput.value);
         }
     });

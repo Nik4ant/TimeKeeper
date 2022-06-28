@@ -3,6 +3,7 @@ import ExcludedTabsManager from "./Managers/excluded-tabs-manager";
 import {ChromeMessageContainer} from "./common-structures";
 
 
+// TODO: cleanup extension permissions before publishing
 await startUpInit();
 
 
@@ -41,6 +42,7 @@ function onBrowserWindowRemoved(_: number): void {
     // Clearing all excluded tabs if last window is closed (browser closed)
     chrome.windows.getAll().then((windows) => {
         if (windows.length === 1) {
+            // FIXME: concept of excluding tabs doesn't work too well (either fix it somehow or redesign)
             ExcludedTabsManager.ClearAll();
         }
     });
@@ -50,8 +52,9 @@ function onTabRemoved(tabId: number, _: chrome.tabs.TabRemoveInfo): void {
     ExcludedTabsManager.Remove(tabId);
 }
 
+// FIXME: This doesn't detect taboo tabs after browser startup (only after taboo page was reloaded)
 function onTabUpdated(tabId: number, changeInfo: chrome.tabs.TabChangeInfo, tab: chrome.tabs.Tab): void {
-    if (changeInfo.status === "complete" && TabooManager.IsTaboo(tab)) {
+    if (changeInfo.status === "complete" && TabooManager.IsTaboo(tab) && !ExcludedTabsManager.Contains(tab.id)) {
         openTabooPage(tab);
         chrome.tabs.remove(tab.id);
     }

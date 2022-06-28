@@ -16,6 +16,10 @@ export default class ExcludedTabsManager {
         return this._excludedTabsGetter();
     }
 
+    static Contains(tabId: number): boolean {
+        return this._excludedTabsGetter().indexOf(tabId) !== -1;
+    }
+
     // Note(Nik4ant): There is no validation because tabId isn't specified by user
     // (although having validation would be nice, but for now I don't really care :D)
     static Add(tabId: number): void {
@@ -33,8 +37,7 @@ export default class ExcludedTabsManager {
         const index = result.indexOf(tabId);
         if (index !== -1) {
             result.splice(index, 1);
+            this._excludedTabsSetter(result);
         }
-
-        this._excludedTabsSetter(result);
     }
 }
