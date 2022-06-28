@@ -6,7 +6,6 @@ import {ChromeMessageContainer} from "./common-structures";
 // TODO: cleanup extension permissions before publishing
 await startUpInit();
 
-
 async function startUpInit() {
     await ExcludedTabsManager.Init();
     await TabooManager.Init();

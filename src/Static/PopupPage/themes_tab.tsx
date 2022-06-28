@@ -22,7 +22,8 @@ export default function ThemesTabContent() {
     }
 
     const supportedThemes = ["light", "night", "forest", "dracula"]
-    // Note: "Forest" is used as a default value until either user
+    // FIXME: bad explanation. Mention that popup.tsx loads theme on startup
+    // Note: "Forest" is used as a default value until value from storage is loaded (if it exists)
     let [currentTheme, setCurrentTheme] = createStorageSignal<string>("UITheme", "forest");
 
     return (

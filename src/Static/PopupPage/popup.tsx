@@ -63,7 +63,6 @@ function PopupRoot() {
         }
     });
 
-
     return (
         <>
             <div class="w-full y-full bg-no-repeat bg-cover bg-base-100 min-w-max">

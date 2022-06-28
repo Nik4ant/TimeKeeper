@@ -45,8 +45,9 @@ function TabooRoot(props) {
     // Note: Down below exclude button has "hover:bg-transparent" class.
     // This is used to make default hover effect disabled until timer ends
     // FIXME: For some reason it can't render 3 digit number
+    // TODO: Make light theme look better (it sucks in general, but this page looks awful with it)
     return (
-        <div>
+        <>
             <div class="flex justify-center items-center h-screen bg-base-100">
                 <div class="card bg-neutral text-neutral-content">
                     <div class="card-body items-center text-center space-y-3">
@@ -74,7 +75,7 @@ function TabooRoot(props) {
                     </div>
                 </div>
             </div>
-        </div>
+        </>
     );
 }
 
@@ -88,5 +89,15 @@ chrome.runtime.onMessage.addListener((message, sender) => {
         }
         render(() => <TabooRoot tabooWebsite={message["tabooWebsite"]} tabooFaviconUrl={favicon} />,
             document.getElementById("root") as HTMLElement);
+        // TODO: add dynamic theme changing as well (for example, when taboo page is open and user change theme,
+        //  theme on this page should be updated ass well)
+        // Loading theme value from storage
+        chrome.storage.sync.get("UITheme").then((storageCurrent) => {
+            const theme= storageCurrent["UITheme"];
+            if (theme !== undefined) {
+                // Changing theme attribute
+                document.getElementsByTagName("html")[0].setAttribute("data-theme", theme);
+            }
+        });
     }
 });
