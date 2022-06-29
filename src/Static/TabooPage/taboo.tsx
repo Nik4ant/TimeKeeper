@@ -3,9 +3,14 @@
 // Without importing css, it doesn't load at all
 import "../styles/taboo.css";
 import {render, Show} from "solid-js/web";
-import {createSignal} from "solid-js";
+import {createEffect, on, createSignal, Accessor} from "solid-js";
 import {ChromeMessageContainer} from "../../common-structures";
+import {connectToStorageSignalAsync} from "../../storage";
 
+
+function SetTheme(theme: string) {
+    document.getElementsByTagName("html")[0].setAttribute("data-theme", theme);
+}
 
 function TabooRoot(props) {
     function excludeTimerStep() {
@@ -37,9 +42,18 @@ function TabooRoot(props) {
         }
     }
 
+    // Note: This code causes: "computations created outside a `createRoot` or `render` will never be disposed"
+    // however I'm not sure if there is an actual memory leak.
+    // Changing taboo page theme every time theme value in storage is changed
+    connectToStorageSignalAsync<string>("UITheme").then((themeGetter: Accessor<string>) => {
+        createEffect(on(themeGetter, (newTheme: string) => {
+            SetTheme(newTheme);
+        }));
+    });
     // Timer before user is allowed to excluded current tab
-    const excludedTimerStartSec = 60;
+    const excludedTimerStartSec = 3;
     const [currentExcludeTimerSec, currentExcludedTimerSecSetter] = createSignal<number>(excludedTimerStartSec);
+    // TODO: reduce time only if user on this page?
     const excludeTimer = setInterval(excludeTimerStep, 1000);
 
     // Note: Down below exclude button has "hover:bg-transparent" class.
@@ -89,14 +103,10 @@ chrome.runtime.onMessage.addListener((message, sender) => {
         }
         render(() => <TabooRoot tabooWebsite={message["tabooWebsite"]} tabooFaviconUrl={favicon} />,
             document.getElementById("root") as HTMLElement);
-        // TODO: add dynamic theme changing as well (for example, when taboo page is open and user change theme,
-        //  theme on this page should be updated ass well)
-        // Loading theme value from storage
+        // Loading initial theme from storage
         chrome.storage.sync.get("UITheme").then((storageCurrent) => {
-            const theme= storageCurrent["UITheme"];
-            if (theme !== undefined) {
-                // Changing theme attribute
-                document.getElementsByTagName("html")[0].setAttribute("data-theme", theme);
+            if (storageCurrent["UITheme"] !== undefined) {
+                SetTheme(storageCurrent["UITheme"]);
             }
         });
     }

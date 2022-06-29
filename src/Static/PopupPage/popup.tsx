@@ -11,6 +11,7 @@ import {Match, render, Switch} from "solid-js/web";
 import {BsShieldLockFill} from 'solid-icons/bs';
 import {createSignal, onMount} from "solid-js";
 
+
 function Navbar({tabSetter}) {
     function NavbarTab(props) {
         // Note: props.icon is component
@@ -51,7 +52,6 @@ function Navbar({tabSetter}) {
     );
 }
 
-
 function PopupRoot() {
     const [currentTab, setCurrentTab] = createSignal<string>("1");
     // Loading theme from storage
@@ -63,6 +63,7 @@ function PopupRoot() {
         }
     });
 
+    // TODO: icons for navbar
     return (
         <>
             <div class="w-full y-full bg-no-repeat bg-cover bg-base-100 min-w-max">

@@ -40,6 +40,8 @@ function TabooInput() {
         const addTabooMessage = new ChromeMessageContainer("addTaboo", [formattedTaboo]);
         chrome.runtime.sendMessage(addTabooMessage, (result: ValidationResult) => {
             // FIXME: the whole design implementation sucks so much...
+            // FIXME part 2: For some reason result can be undefined sometimes
+            // FIXME part 3: Sometimes "receiving end doesn't exist"
             if (!result.isOk) {
                 errorMessage.innerHTML = result.htmlErrorMessage;
                 // Different outline color for input on error
