@@ -1,10 +1,9 @@
 import { TabooApi } from "./core/taboo_api"
 
 
-function onTabUpdated(tabId: number, changeInfo: chrome.tabs.TabChangeInfo, tab: chrome.tabs.Tab) {
-    if (changeInfo.status == "loading") {
-        console.log(tab.url, tabId, tab.id);
+// That's pretty much it. TODO: work session thingy and combine that with tabs exclusion
+chrome.webNavigation.onCompleted.addListener(details => {
+    if (TabooApi.IsTaboo(details.url)) {
+        chrome.tabs.goBack(details.tabId).then(value => console.log(value));
     }
-}
-
-chrome.tabs.onUpdated.addListener(onTabUpdated);
+});

@@ -27,7 +27,7 @@ class TabooNotExist implements ErrorType {
 
 
 export namespace TabooApi {
-    export function add(tabooDomain: string): Maybe<TabooValidationError> {
+    export function Add(tabooDomain: string): Maybe<TabooValidationError> {
         if (tabooDomain.length === 0) {
             return Maybe.Err(new TabooValidationError(`Taboo domain is empty`, "Empty"));
         }
@@ -45,7 +45,7 @@ export namespace TabooApi {
         return Maybe.Ok();
     }
 
-    export function remove(tabooDomain: string): Maybe<TabooNotExist> {
+    export function Remove(tabooDomain: string): Maybe<TabooNotExist> {
         const currentTaboos = tabooWebsitesGetter();
         const index = currentTaboos.indexOf(tabooDomain);
 
@@ -56,5 +56,14 @@ export namespace TabooApi {
         } else {
             return Maybe.Err(new TabooNotExist(`Taboo domain "${tabooDomain}" doesn't exist`));
         }
+    }
+
+    export function IsTaboo(website: string): boolean {
+        for (const tabooDomain of tabooWebsitesGetter()) {
+            if (website.indexOf(tabooDomain) !== -1) {
+                return true;
+            }
+        }
+        return false;
     }
 }

@@ -27,7 +27,7 @@ export {currentThemeGetter};
 
 export function SetTheme(theme: string): Maybe<ThemeNotExist> {
     // Check if theme exists
-    if (!availableThemesGetter().includes(theme)) {
+    if (availableThemesGetter().indexOf(theme) === -1) {
         return Maybe.Err(new ThemeNotExist(`Theme: "${theme}" doesn't exist`));
     }
     // Update theme
@@ -40,7 +40,7 @@ export function SetTheme(theme: string): Maybe<ThemeNotExist> {
 // (as long as theme was removed from DEFAULT_THEMES it considered a custom one)
 function CheckForNewThemes() {
     for (const defaultTheme of DEFAULT_THEMES) {
-        if (!availableThemesGetter().includes(defaultTheme)) {
+        if (availableThemesGetter().indexOf(defaultTheme) === -1) {
             availableThemesSetter([...availableThemesGetter(), defaultTheme]);
         }
     }
