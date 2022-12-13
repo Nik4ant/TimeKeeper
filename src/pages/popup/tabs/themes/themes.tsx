@@ -5,9 +5,9 @@ import {SetTheme, availableThemesGetter, currentThemeGetter} from "../../../../c
 function ThemeSwitcher() {
     function switchTheme(theme: string) {
         var result = SetTheme(theme);
-        if (!result.isOk) {
-            alert(`Unpredictable error. Contact the developer if possible. Thank you. Error message:\n${result.error.message}`);
-        }
+        // Error might occur, but only in wierd cases if something wrong with the code
+        console.assert(result.isOk, "Unpredictable error. Contact the developer if possible. Thank you. Error message:\n" +
+            result.error.message);
     }
     // Design is based on daisyUI theme switcher here: https://daisyui.com/docs/themes/
     return <>
