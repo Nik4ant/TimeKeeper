@@ -1,0 +1,5 @@
+@import "../common/style.css";
+
+.navbar-icon {
+    @apply self-center;
+}

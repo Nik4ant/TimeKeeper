@@ -1,6 +1,0 @@
-@import "base.css";
-
-
-.navbar-icon {
-    @apply self-center text-accent;
-}

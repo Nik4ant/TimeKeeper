@@ -9,15 +9,18 @@ module.exports = {
         topLevelAwait: true,
     },
     entry: {
-        background: path.resolve(projectRoot, "src", "background.ts"),
-        popup: path.resolve(projectRoot, "src", "Static", "PopupPage", "popup.tsx"),
-        taboo: path.resolve(projectRoot, "src", "Static", "TabooPage", "taboo.tsx"),
+        background: {
+            import: path.resolve(projectRoot, "src", "background.ts"), filename: "./[name].js"
+        },
+        popup: {
+            import: path.resolve(projectRoot, "src", "pages", "popup", "popup.tsx"), filename: "[name]/[name].js"
+        },
+        // taboo: path.resolve(projectRoot, "src", "static", "TabooPage", "taboo.tsx"),
     },
     resolve: {
         extensions: [".ts", ".js", ".tsx", ".tsx"],
     },
     output: {
-        filename: "[name].js",
         path: path.resolve(projectRoot, "dist"),
         clean: true,
     },
@@ -65,20 +68,24 @@ module.exports = {
     },
     plugins: [
         new MiniCssExtractPlugin({
-            filename: "styles/[name].css",
+            filename: "[name]/[name].css",
         }),
         new CopyWebpackPlugin({
             patterns: [
                 {
-                    from: "./src/Static",
+                    from: "./src/pages",
                     // Copying all files except for files that are processed using loaders
-                    // Note (Nik4ant): This might be a bad decision, but I don't want to
+                    // Note: This might be a bad decision, but I don't want to
                     // keep pages content separately because of .html files
                     filter: (resourcePath) => {
-                        const extensionsToFilter = ["ts", "js", "tsx", "jsx"];
+                        const extensionsToFilter = ["ts", "js", "tsx", "jsx", "css"];
                         const fileExt = path.extname(resourcePath).replace('.', '');
                         return extensionsToFilter.indexOf(fileExt) === -1;
-                    }}
+                    }
+                },
+                {
+                    from: "public/"
+                }
             ],
         }),
     ],

@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@keyframes gradient-scrolling {
+    0% {
+        background-position: 0% center;
+    }
+    100% {
+        background-position: -200% center;
+    }
+}
+
+.secondary-text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-secondary to-secondary-focus;
+    background-size: 200%;
+    animation: gradient-scrolling 5s ease-in-out infinite;
+}
