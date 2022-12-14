@@ -9,12 +9,10 @@ function TabooForm() {
 
     function addTaboo(tabooDomain: string) {
         var result = TabooApi.Add(tabooDomain);
-        if (!result.isOk) {
+        if (!result.isOk)
             setCurrentError(result.error.message);
-        }
-        else {
+        else
             setCurrentError('');
-        }
     }
 
 
@@ -36,7 +34,7 @@ function TabooForm() {
                 <button onClick={() => addTaboo(tabooInputElement.value)} class="btn btn-primary items-center justify-center rounded-box">Add</button>
             </label>
             <Show when={currentError().length !== 0}>
-                <p class="mt-2 text-sm text-error">{currentError()}</p>
+                <p class="mt-2 ml-2 text-lg font-medium text-error">{currentError()}</p>
             </Show>
         </div>
     </>
@@ -52,10 +50,11 @@ function TabooWebsite(props) {
 
     const deleteIcon = (<RiSystemDeleteBin2Line size={24} class={"text-error"}
                                                 onClick={_ => removeTaboo(props.website)} /> as HTMLOrSVGImageElement);
-    const tabooWebsite = (<p class="flex-1 font-medium text-base text-base-content decoration-error decoration-4">{props.website}</p> as HTMLParagraphElement);
+    const tabooWebsite = (<p class="flex-1 font-medium text-base text-base-content">{props.website}</p> as HTMLParagraphElement);
     // Special hover effect (taboo websites is crossed when delete icon is hovered
-    deleteIcon.addEventListener("mouseover", (_) => tabooWebsite.classList.add("line-through"));
-    deleteIcon.addEventListener("mouseout", (_) => tabooWebsite.classList.remove("line-through"));
+    const HOVER_EFFECT_CLASSES = ["line-through", "decoration-error", "decoration-4"];
+    deleteIcon.addEventListener("mouseover", (_) => tabooWebsite.classList.add(...HOVER_EFFECT_CLASSES));
+    deleteIcon.addEventListener("mouseout", (_) => tabooWebsite.classList.remove(...HOVER_EFFECT_CLASSES));
 
     return <>
         <div class="flex space-x-2 items-center m-2 p-2.5 bg-base-300 border border-accent-focus rounded-md">
