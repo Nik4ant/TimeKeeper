@@ -1,0 +1,9 @@
+@import "../../../common/style.css";
+
+.countdown-container {
+    @apply flex flex-col text-center text-base font-medium;
+}
+
+.countdown-container-value {
+    @apply countdown font-mono text-4xl;
+}

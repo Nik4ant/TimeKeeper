@@ -7,13 +7,14 @@ import { IoColorPaletteSharp } from 'solid-icons/io'
 import { RiDocumentFileForbidLine } from 'solid-icons/ri'
 import ThemesRoot from "./tabs/themes/themes";
 import TabooRoot from "./tabs/taboo/taboo";
+import PomodoroRoot from "./tabs/pomodoro/pomodoro";
 
 
 const TABS = {
     // First item is component to render, second is tab name displayed in navbar and third is icon.
     // Note: Without: () => [icon's JSX] there is an error about indisposed computations
     0: [TabooRoot, "Taboo", () => <RiDocumentFileForbidLine size={24} class="navbar-icon" />],
-    1: [ThemesRoot, "Pomodoro", () => <FaSolidBusinessTime size={24} class="navbar-icon" />],
+    1: [PomodoroRoot, "Pomodoro", () => <FaSolidBusinessTime size={24} class="navbar-icon" />],
     2: [ThemesRoot, "Themes", () => <IoColorPaletteSharp size={24} class="navbar-icon" />]
 }
 
