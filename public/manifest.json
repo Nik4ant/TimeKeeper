@@ -8,10 +8,9 @@
     },
     "permissions": [
         "storage",
-        "activeTab",
         "webNavigation",
-        "tabs",
-        "scripting"
+        "alarms",
+        "notifications"
     ],
     "action": {
         "default_popup": "popup/popup.html"
