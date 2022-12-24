@@ -1,11 +1,8 @@
-import {createSignal} from "solid-js"
+import {createSignal} from "solid-js";
 import { AiOutlinePauseCircle, AiOutlinePlayCircle } from 'solid-icons/ai';
 import {PomodoroApi} from "../../../../core/pomodoro_api";
 import "./pomodoro.css";
 
-
-// TODO 1: Desync between background and frontend is approximately 3-4 seconds (Sending message to the background might fix this?)
-// Note: But sometimes there is no desync. Did the issue solve itself...?
 
 // TODO 2: Disable "spin" animation onload (apply it only for countdown)
 // TODO 3: Wouldn't be cool to have round slider to set time? (like real world once)
@@ -20,9 +17,6 @@ function Timer() {
     const [currentSeconds, setCurrentSeconds] = createSignal(0);
     const [currentMinutes, setCurrentMinutes] = createSignal(0);
     const [currentHours, setCurrentHours] = createSignal(0);
-    // Initial duration time is used to calculate how much time passed
-    // TODO: finish this thing
-    const [timerInitialDurationMs, setTimerInitialDurationMs] = createSignal(0);
     // Time left represented in Ms
     const currentTotalMs = () => currentSeconds() * 1000 + currentMinutes() * 60 * 1000 + currentHours() * 3600 * 1000;
     // Only indicates pause for frontend elements. Changes in background code occur only if specific API was called
@@ -30,29 +24,38 @@ function Timer() {
     // endregion
 
     function HandlePauseValueChanged(value): void {
+        // Ignore pause change if timer values are zero
+        if (currentTotalMs() === 0) {
+            // FIXME: WHY THIS DOESN'T WORK?!?!
+            setIsPauseFrontend(!value);  // reset fronted value back
+            return;
+        }
+
+        setIsPauseFrontend(value);
         // If not pause starting the timer again
         if (!value) {
             timerTickInterval = setInterval(OneSecondTick, 1000);
-            PomodoroApi.UnpauseCurrentTimer().then(_ => _);
-        } else {
+            PomodoroApi.Unpause()
+        }
+        else {
             clearInterval(timerTickInterval);
-            PomodoroApi.PauseCurrentTimer().then(_ => _);
+            PomodoroApi.Pause().then(_ => _);
         }
     }
-    // Function for notifying both frontend and background
-    function OnFrontendPauseValueChanged(value) {
-        setIsPauseFrontend(value);
-        HandlePauseValueChanged(value);
+    // Updates signal values for seconds, minutes and hours based on given time in Ms
+    function SetTimeFromMs(timeMs: number): void {
+        const totalSecondsLeft = timeMs / 1000;
+        setCurrentHours(Math.floor(totalSecondsLeft / 3600));
+        setCurrentMinutes(Math.floor(totalSecondsLeft / 60) % 60);
+        setCurrentSeconds(Math.floor(totalSecondsLeft) % 60);
     }
-    function SetBackgroundTimer(totalTimeMs: number) {
-        var pomodoroTimerInfo = PomodoroApi.SetTimer(totalTimeMs);
-        // Set value to frontend time
-        setCurrentSeconds(pomodoroTimerInfo.secondsLeft);
-        setCurrentMinutes(pomodoroTimerInfo.minutesLeft);
-        setCurrentHours(pomodoroTimerInfo.hoursLeft);
+    function CreateTimer(timerDurationMs: number): void {
+        PomodoroApi.CreateTimer(timerDurationMs);
+
         setIsPauseFrontend(false);
-        setTimerInitialDurationMs(currentTotalMs());
-        timerTickInterval = setInterval(OneSecondTick, 1000);  // starting the timer
+        SetTimeFromMs(timerDurationMs);
+
+        timerTickInterval = setInterval(OneSecondTick, 1000);
     }
     function OneSecondTick() {
         // 0 seconds --> reduce minutes and set seconds back to 60
@@ -63,31 +66,30 @@ function Timer() {
                 if (currentHours() === 0) {
                     alert("Frontend timer end");
                     clearInterval(timerTickInterval);
+                    setIsPauseFrontend(true);
                     return;
                 }
                 setCurrentHours(currentHours() - 1);
                 setCurrentMinutes(60);
             }
-            setCurrentMinutes(currentMinutes() - 1)
+            setCurrentMinutes(currentMinutes() - 1);
             setCurrentSeconds(60);
         }
         setCurrentSeconds(currentSeconds() - 1);
     }
 
-    // Loading latest timer info from background page to popup
+    // Loading the latest timer info
     PomodoroApi.GetLatestTimer().then((timerInfo) => {
-        setCurrentSeconds(timerInfo.secondsLeft);
-        setCurrentMinutes(timerInfo.minutesLeft);
-        setCurrentHours(timerInfo.hoursLeft);
-        // If there is ongoing timer starting interval immediately
-        setIsPauseFrontend(timerInfo.isPaused);
-        if (!timerInfo.isPaused) {
+        // 1) Set values for visual elements
+        setIsPauseFrontend(timerInfo.isPaused);  // 1.1) Pause
+        SetTimeFromMs(timerInfo.timeLeftMs);  // 1.2) Time left
+        // 2) If there is ongoing timer in the background starting interval immediately
+        if (!timerInfo.isPaused)
             timerTickInterval = setInterval(OneSecondTick, 1000);
-        }
     });
 
     return <>
-        <div class="radial-progress text-primary" style={{"--value": 100/*currentTotalMs() * 100 / timerInitialDurationMs()*/,
+        <div class="radial-progress text-primary" style={{"--value": 42/*currentTotalMs() * 100 / timerInitialDurationMs()*/,
             "--thickness": "4px", "--size": "14rem"}}>
             <div class="flex flex-col justify-center">
                 <div class="flex gap-5 text-base-content">
@@ -107,14 +109,14 @@ function Timer() {
                 <div class="absolute bottom-5 left-1/2 right-1/2 flex justify-center">
                     <label class="h-1/2 swap swap-rotate text-secondary">
                         <input type="checkbox" checked={isPauseFronted()}
-                               onClick={() => OnFrontendPauseValueChanged(!isPauseFronted())} />
+                               onClick={() => HandlePauseValueChanged(!isPauseFronted())} />
                         <AiOutlinePauseCircle class="swap-off fill-current" size={48} />
                         <AiOutlinePlayCircle class="swap-on fill-current" size={48} />
                     </label>
                 </div>
             </div>
         </div>
-        <button onClick={() => SetBackgroundTimer(2 * 60 * 1000)} class="btn btn-accent">SET TIMER (TEMP)</button>
+        <button onClick={() => CreateTimer(2 * 60 * 1000)} class="btn btn-accent">SET TIMER (TEMP)</button>
     </>
 }
 

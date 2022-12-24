@@ -8,27 +8,33 @@ fire for at least 1 minute". Source: https://developer.chrome.com/docs/extension
 
 */
 
-type PomodoroInfo = {
+export type TimerInfo = {
     isPaused: boolean,
-    hoursLeft: number,
-    minutesLeft: number,
-    secondsLeft: number,
+    durationMs: number,
+    timeLeftMs: number,
+    startTimeDate: number,
+    lastPauseDate: number,  // last time when pause was triggered
 }
-const DEFAULT_POMODORO_INFO: PomodoroInfo = {
+const DEFAULT_TIMER_INFO: TimerInfo = {
     isPaused: true,
-    hoursLeft: 0,
-    minutesLeft: 0,
-    secondsLeft: 0,
+    durationMs: 0,
+    timeLeftMs: 0,
+    startTimeDate: 0,
+    lastPauseDate: 0,
 }
 
-const POMODORO_INFO_STORAGE_NAME = "TimeKeeperPomodoroTimer"
-let [pomodoroStorageInfoGetter, pomodoroStorageInfoSetter] = await createStorageSignalAsync(POMODORO_INFO_STORAGE_NAME, DEFAULT_POMODORO_INFO);
+export const TIMER_INFO_STORAGE_NAME = "TimeKeeperPomodoroTimer";
+let [timerStorageInfoGetter, timerStorageInfoSetter] = await createStorageSignalAsync(TIMER_INFO_STORAGE_NAME, DEFAULT_TIMER_INFO);
+
 
 export namespace PomodoroApi {
-    const POMODORO_CHROME_ALARM_NAME = "TimeKeeperPomodoroAlarm"
+    const POMODORO_CHROME_ALARM_NAME = "TimeKeeperPomodoroAlarm";
 
     // Used to set up alarm event listener during background startup
     export function _Init() {
+        // TODO: explanation related to issue below
+        // FIXME: I'll need this later: https://stackoverflow.com/a/14102365/13940541 (what if I just clear all the alarms on start?)
+        chrome.alarms.clear(POMODORO_CHROME_ALARM_NAME);
         chrome.alarms.onAlarm.addListener(OnChromeAlarm);
     }
 
@@ -36,71 +42,85 @@ export namespace PomodoroApi {
         // Check if alarm is related to pomodoro
         if (alarm.name === POMODORO_CHROME_ALARM_NAME) {
             // Resetting timer
-            pomodoroStorageInfoSetter(DEFAULT_POMODORO_INFO);
+            timerStorageInfoSetter(DEFAULT_TIMER_INFO);
             // "Alarm"
-            console.log("ALARM ENDED! BIP-BOP; BIP-BOP...")
+            console.log("ALARM ENDED! BIP-BOP; BIP-BOP...");
         }
     }
 
-    function MsToPomodoroInfo(totalMsLeft: number, isPaused: boolean): PomodoroInfo {
-        var totalSecondsLeft = totalMsLeft / 1000;
-        return {
-            isPaused: isPaused,
-            hoursLeft: Math.floor(totalSecondsLeft / 3600),
-            minutesLeft: Math.floor(totalSecondsLeft / 60) % 60,
-            secondsLeft: Math.floor(totalSecondsLeft) % 60,
-        }
-    }
-
-    // Updates storage value with new info or with time left before current alarm goes off
-    export async function UpdateStorageInfo(isTimerPaused: boolean, newTimerInfo?: PomodoroInfo): Promise<void> {
-        // Using alarm to see the difference
-        if (newTimerInfo === undefined) {
-            var alarm = await chrome.alarms.get(POMODORO_CHROME_ALARM_NAME);
-            if (alarm === undefined) {
-                // ignoring for now... TODO: error
-                console.log("ERROR! Can't find the alarm");
-                return;
-            }
-            pomodoroStorageInfoSetter(MsToPomodoroInfo(alarm.scheduledTime - Date.now(), isTimerPaused));
-        }
-        else {
-            pomodoroStorageInfoSetter(newTimerInfo);
-        }
-    }
-
-    export function SetTimer(totalTimeMs: number): PomodoroInfo {
-        var result = MsToPomodoroInfo(totalTimeMs, false);
-        // Creating alarm and saving info to storage
-        chrome.alarms.create(POMODORO_CHROME_ALARM_NAME, {when: new Date().setMilliseconds(totalTimeMs)});
-        pomodoroStorageInfoSetter(result);
-        return result;
-    }
-
-    export async function PauseCurrentTimer() {
-        // Updating storage info before clearing alarm
-        // FIXME: this is dumb
-        await UpdateStorageInfo(true);
-        await chrome.alarms.clear(POMODORO_CHROME_ALARM_NAME);
-    }
-
-    export async function UnpauseCurrentTimer() {
-        // Restarting most recent alarm
-        var pomodoroInfo = await GetLatestTimer();
-        SetTimer(pomodoroInfo.hoursLeft * 60 * 60 * 1000 + pomodoroInfo.minutesLeft * 60 * 1000 + pomodoroInfo.secondsLeft * 1000);
-    }
-
-    // Returns info about currently working timer if there is any.
-    // Otherwise, returns the latest info from storage
-    export async function GetLatestTimer(): Promise<PomodoroInfo> {
-        var lastChromeAlarm: chrome.alarms.Alarm | undefined = await chrome.alarms.get(POMODORO_CHROME_ALARM_NAME);
+    export async function GetLatestTimer(): Promise<TimerInfo> {
+        const lastChromeAlarm: chrome.alarms.Alarm | undefined = await chrome.alarms.get(POMODORO_CHROME_ALARM_NAME);
         // Check if there is any running alarm
         if (lastChromeAlarm === undefined) {
             // If no, return the latest one from storage
-            return pomodoroStorageInfoGetter();
+            return timerStorageInfoGetter();
         }
-        // If yes calculate how much time left and format that into pomodoro info.
-        // Note: Value in storage doesn't have the latest time, but info about pause is 100% correct
-        return MsToPomodoroInfo(lastChromeAlarm.scheduledTime - Date.now(), pomodoroStorageInfoGetter().isPaused);
+        // If yes calculate how much time left and format that into timer info.
+        // Note: Value in storage doesn't have the latest time, but all other info is 100% correct
+        const timerInfoStorage = timerStorageInfoGetter();
+        const newInfo = {
+            isPaused: false,  // if chrome alarm exists than timer is currently running
+            timeLeftMs:  lastChromeAlarm.scheduledTime - Date.now(),
+            durationMs: timerInfoStorage.durationMs,
+            startTimeDate: timerInfoStorage.startTimeDate,
+            lastPauseDate: timerInfoStorage.lastPauseDate
+        }
+        // Save that info to storage as well
+        timerStorageInfoSetter(newInfo);
+        return newInfo;
+    }
+
+    // Starts background timer and updates storage info
+    export function CreateTimer(timerDurationMs: number): void {
+        // Step 1. Start a chrome alarm that will be processed in the background
+        chrome.alarms.create(POMODORO_CHROME_ALARM_NAME, {
+            when: new Date().setMilliseconds(timerDurationMs),
+        });
+        // Step 2. Create timer info and update storage value
+        const pomodoroTimerInfo: TimerInfo = {
+            isPaused: false,
+            startTimeDate: Date.now(),
+            durationMs: timerDurationMs,
+            timeLeftMs: timerDurationMs,
+            lastPauseDate: 0,
+        }
+        timerStorageInfoSetter(pomodoroTimerInfo);
+    }
+
+    // FIXME: boolean is temporary change for Maybe later
+    // Pauses currently running timer
+    export async function Pause(): Promise<boolean> {
+        // Step 1. Clear background alarm
+        const wasAlarmCleared = await chrome.alarms.clear(POMODORO_CHROME_ALARM_NAME);
+        if (!wasAlarmCleared) {
+            console.log("ERROR! Can't clear alarm. Somebody help...")
+            return false;
+            // TODO: unreachable error
+        }
+        // Step 2. Save changes to storage
+        var timerInfo = timerStorageInfoGetter();
+        timerInfo.isPaused = true;
+        timerInfo.lastPauseDate = Date.now();
+        timerStorageInfoSetter(timerInfo);
+        return true;
+    }
+
+    // Unpauses most recent timer
+    export function Unpause() {
+        // Check if there is any alarm to pause
+        var timerInfo = timerStorageInfoGetter()
+        if (!timerInfo.isPaused) {
+            // TODO: unreachable error
+        }
+        // Step 1. Calculate when "new" background alarm needs to fire
+        const totalMsLeft = timerInfo.durationMs - (timerInfo.lastPauseDate - timerInfo.startTimeDate)
+        chrome.alarms.create(POMODORO_CHROME_ALARM_NAME, {
+           when: new Date().setMilliseconds(totalMsLeft),
+        });
+        // Step 2. Update values
+        timerInfo.isPaused = false;
+        timerInfo.timeLeftMs = totalMsLeft;
+        // Step 3. Save changes to storage
+        timerStorageInfoSetter(timerInfo);
     }
 }
