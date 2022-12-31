@@ -1,4 +1,5 @@
 import {createStorageSignalAsync} from "../utils/storage_manager";
+import {ErrorType, Maybe} from "../utils/custom_error";
 
 /*
 Quote from docs: "...setting delayInMinutes or periodInMinutes to less than 1 will not be honored and will cause
@@ -27,14 +28,29 @@ export const TIMER_INFO_STORAGE_NAME = "TimeKeeperPomodoroTimer";
 let [timerStorageInfoGetter, timerStorageInfoSetter] = await createStorageSignalAsync(TIMER_INFO_STORAGE_NAME, DEFAULT_TIMER_INFO);
 
 
+class UnpauseRunningTimerError implements ErrorType {
+    message: string;
+
+    constructor(message: string) {
+        this.message = message;
+    }
+}
+class UnexpectedAlarmError implements ErrorType {
+    message: string;
+
+    constructor(message: string) {
+        this.message = message;
+    }
+}
+
+
 export namespace PomodoroApi {
     const POMODORO_CHROME_ALARM_NAME = "TimeKeeperPomodoroAlarm";
 
     // Used to set up alarm event listener during background startup
     export function _Init() {
-        // TODO: explanation related to issue below
         // FIXME: I'll need this later: https://stackoverflow.com/a/14102365/13940541 (what if I just clear all the alarms on start?)
-        chrome.alarms.clear(POMODORO_CHROME_ALARM_NAME);
+        // FIXME 2: FUCK! This probably was a bad idea...chrome.alarms.clear(POMODORO_CHROME_ALARM_NAME);
         chrome.alarms.onAlarm.addListener(OnChromeAlarm);
     }
 
@@ -52,6 +68,8 @@ export namespace PomodoroApi {
         const lastChromeAlarm: chrome.alarms.Alarm | undefined = await chrome.alarms.get(POMODORO_CHROME_ALARM_NAME);
         // Check if there is any running alarm
         if (lastChromeAlarm === undefined) {
+            // FIXME: most likely this is source of the bug where before timer runs out it returns old data
+            // TODO: research code import and restructure it to use messages
             // If no, return the latest one from storage
             return timerStorageInfoGetter();
         }
@@ -87,30 +105,30 @@ export namespace PomodoroApi {
         timerStorageInfoSetter(pomodoroTimerInfo);
     }
 
-    // FIXME: boolean is temporary change for Maybe later
     // Pauses currently running timer
-    export async function Pause(): Promise<boolean> {
-        // Step 1. Clear background alarm
-        const wasAlarmCleared = await chrome.alarms.clear(POMODORO_CHROME_ALARM_NAME);
-        if (!wasAlarmCleared) {
-            console.log("ERROR! Can't clear alarm. Somebody help...")
-            return false;
-            // TODO: unreachable error
-        }
-        // Step 2. Save changes to storage
+    export async function Pause(): Promise<Maybe<UnexpectedAlarmError>> {
+        // FIXME: Pause is now broken for some reason...It can't get alarm...
+        // Step 1. Update timer info in storage to reuse it later (when timer is resumed)
+        const chromeAlarm = await chrome.alarms.get(POMODORO_CHROME_ALARM_NAME);
         var timerInfo = timerStorageInfoGetter();
         timerInfo.isPaused = true;
         timerInfo.lastPauseDate = Date.now();
+        timerInfo.timeLeftMs = chromeAlarm.scheduledTime - Date.now();
         timerStorageInfoSetter(timerInfo);
-        return true;
+        // Step 2. Clear background alarm
+        const wasAlarmCleared = await chrome.alarms.clear(POMODORO_CHROME_ALARM_NAME);
+        if (!wasAlarmCleared) {
+            return Maybe.Err(new UnexpectedAlarmError("UNEXPECTED ERROR! Can't clear chrome alarm to pause timer"));
+        }
+        return Maybe.Ok();
     }
 
     // Unpauses most recent timer
-    export function Unpause() {
+    export function Unpause(): Maybe<UnpauseRunningTimerError> {
         // Check if there is any alarm to pause
         var timerInfo = timerStorageInfoGetter()
         if (!timerInfo.isPaused) {
-            // TODO: unreachable error
+            return Maybe.Err(new UnpauseRunningTimerError("Unreachable error! Can't unpause running timer"));
         }
         // Step 1. Calculate when "new" background alarm needs to fire
         const totalMsLeft = timerInfo.durationMs - (timerInfo.lastPauseDate - timerInfo.startTimeDate)
@@ -122,5 +140,7 @@ export namespace PomodoroApi {
         timerInfo.timeLeftMs = totalMsLeft;
         // Step 3. Save changes to storage
         timerStorageInfoSetter(timerInfo);
+
+        return Maybe.Ok();
     }
 }

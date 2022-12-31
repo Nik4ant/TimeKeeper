@@ -1,9 +1,16 @@
 @import "../../../common/style.css";
 
-.countdown-container {
-    @apply flex flex-col text-center text-base font-medium;
-}
-
+/* Note: Couldn't find a proper way to reuse counter text styles, so copy past goes brr... */
 .countdown-container-value {
     @apply countdown font-mono text-4xl;
+}
+
+.time-input {
+    @apply input input-ghost font-mono text-4xl;
+}
+.time-input:focus {
+    outline: none;
+}
+.time-input::-webkit-calendar-picker-indicator {
+    display: none;
 }
