@@ -1,5 +1,5 @@
 import {createSignal, For, Show} from "solid-js";
-import {TabooApi, TABOO_STORAGE_NAME, MAX_TABOO_LENGTH} from "../../../../core/taboo_api";
+import {TABOO_STORAGE_NAME, Taboo} from "../../../../core/taboo_api";
 import {RiSystemDeleteBin2Line} from "solid-icons/ri";
 import {connectToStorageSignalAsync} from "../../../../utils/storage_manager";
 
@@ -8,17 +8,22 @@ function TabooForm() {
     const [currentError, setCurrentError] = createSignal<string>("");
 
     function addTaboo(tabooDomain: string) {
-        var result = TabooApi.Add(tabooDomain);
-        if (!result.isOk)
-            setCurrentError(result.error.message);
-        else
-            setCurrentError('');
+        // Send message to the background to add taboo
+        chrome.runtime.sendMessage(new Taboo.Message.Add(tabooDomain), (response: Taboo.Message.AddResponse) => {
+            if (!response.isOk)
+                setCurrentError(response.error.message);
+            else {
+                setCurrentError('');
+                // Clear input field when taboo was successfully added
+                tabooInputElement.value = "";
+            }
+        });
     }
 
 
     const tabooInputElement = (<input class="input bg-base-300 border-base-content border-r-0 w-1/2 p-1.5 text-lg focus:outline-none focus:border-primary-focus"
                                       classList={{"border-error focus:border-error": currentError().length !== 0}}
-                                      type="text" placeholder="example.com" maxLength={MAX_TABOO_LENGTH}/>) as HTMLInputElement;
+                                      type="text" placeholder="example.com" maxLength={Taboo.MAX_LENGTH}/>) as HTMLInputElement;
     tabooInputElement.addEventListener("keyup", (e) => {
         if (e.key.toLowerCase() === "enter")
             addTaboo(tabooInputElement.value);
@@ -42,10 +47,11 @@ function TabooForm() {
 
 function TabooWebsite(props) {
     function removeTaboo(tabooDomain: string) {
-        var result = TabooApi.Remove(tabooDomain);
-        // Error might occur, but only in wierd cases if something wrong with the code
-        if (!result.isOk)
-            alert(`Unpredictable error. Contact the developer if possible. Thank you. Error message:\n${result.error.message}`);
+        chrome.runtime.sendMessage(new Taboo.Message.Remove(tabooDomain), (response: Taboo.Message.RemoveResponse) => {
+            // Error might occur, but only in wierd cases if something wrong with the code
+            if (!response.isOk)
+                alert(`Unpredictable error. Contact the developer if possible. Thank you. Error message:\n${response.error.message}`);
+        });
     }
 
     const deleteIcon = (<RiSystemDeleteBin2Line size={24} class={"text-error"}
