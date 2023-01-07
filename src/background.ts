@@ -4,20 +4,17 @@ import {Taboo} from "./core/taboo_api";
 
 
 // That's pretty much it. TODO: work session thingy and combine that with tabs exclusion
-chrome.webNavigation.onCompleted.addListener(async (details) => {
+chrome.webNavigation.onCompleted.addListener( (details) => {
     if (Taboo.Api.IsTaboo(details.url)) {
         // TODO MAIN: frame stuff is still needed to check only for final page and not extra content
         console.log(details);  // debug only
 
         // Try to go back
-        await chrome.tabs.goBack(details.tabId);
-        // Sometimes there is no go back option.
-        // In this case tab url won't change and the only option left is to close it
-        const tab = await chrome.tabs.get(details.tabId);
-        if (tab.url === details.url) {
-            await chrome.tabs.remove(tab.id);
-        }
-
+        chrome.tabs.goBack(details.tabId)
+            .catch(() => {
+                // Sometimes there is no go back option. In this case close the taboo tab
+                chrome.tabs.remove(details.tabId);
+            });
     }
 });
 // region APIs setup
