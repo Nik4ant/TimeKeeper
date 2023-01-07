@@ -1,4 +1,3 @@
-// TODO: better logo
 export function TimeKeeperLogo() {
     return (
         <>
