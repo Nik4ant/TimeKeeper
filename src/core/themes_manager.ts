@@ -3,10 +3,12 @@ import {createStorageSignalAsync} from "../utils/storage_manager";
 
 
 class ThemeNotExist implements ErrorType {
-    message: string
+    message: string;
+    theme: string;
 
-    constructor(message: string) {
-        this.message = message;
+    constructor(theme: string) {
+        this.message = `Theme: "${theme}" doesn't exist`;
+        this.theme = theme;
     }
 }
 
@@ -14,7 +16,6 @@ class ThemeNotExist implements ErrorType {
 const DEFAULT_THEMES = ["night", "forest", "dark", "light", "cyberpunk"];
 // Signal for list of available themes
 const THEMES_STORAGE_NAME = "TimeKeeperThemes";
-// TODO: ability to add custom themes
 export let [availableThemesGetter, availableThemesSetter] = await createStorageSignalAsync<string[]>(THEMES_STORAGE_NAME, DEFAULT_THEMES);
 CheckForNewThemes();
 
@@ -23,12 +24,14 @@ const LATEST_THEME_STORAGE_NAME = "TimeKeeperLatestTheme";
 let [currentThemeGetter, currentThemeSetter] = await createStorageSignalAsync<string>(LATEST_THEME_STORAGE_NAME, DEFAULT_THEMES[0]);
 // Set theme on load
 SetTheme(currentThemeGetter());
+// TODO: ability to add custom themes
+// WARNING: This will work fine as long as themes are constant values and can't be created by user
 export {currentThemeGetter};
 
 export function SetTheme(theme: string): Maybe<ThemeNotExist> {
     // Check if theme exists
     if (availableThemesGetter().indexOf(theme) === -1) {
-        return Maybe.Err(new ThemeNotExist(`Theme: "${theme}" doesn't exist`));
+        return Maybe.Err(new ThemeNotExist(theme));
     }
     // Update theme
     document.getElementsByTagName("html")[0].setAttribute("data-theme", theme);

@@ -7,8 +7,7 @@ const [tabooWebsitesGetter, tabooWebsiteSetter] = await createStorageSignalAsync
 
 
 export namespace Taboo {
-    // TODO: why min length is exported? Research it
-    export const MIN_LENGTH = 4;
+    const MIN_LENGTH = 4;
     export const MAX_LENGTH = 30;
 
     class TabooValidationError implements ErrorType {
@@ -23,8 +22,8 @@ export namespace Taboo {
     class TabooNotExist implements ErrorType {
         message: string
 
-        constructor(message: string) {
-            this.message = message
+        constructor(tabooDomain: string) {
+            this.message = `Taboo domain "${tabooDomain}" doesn't exist`;
         }
     }
 
@@ -104,7 +103,7 @@ export namespace Taboo {
                 tabooWebsiteSetter(currentTaboos);
                 return Maybe.Ok();
             } else {
-                return Maybe.Err(new TabooNotExist(`Taboo domain "${tabooDomain}" doesn't exist`));
+                return Maybe.Err(new TabooNotExist(tabooDomain));
             }
         }
 

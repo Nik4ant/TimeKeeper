@@ -31,26 +31,23 @@ let [timerStorageInfoGetter, timerStorageInfoSetter] = await createStorageSignal
 class UnpauseRunningTimerError implements ErrorType {
     message: string;
 
-    constructor(message: string) {
-        this.message = message;
+    constructor() {
+        this.message = "Unreachable error! Can't unpause running timer";
     }
 }
 class UnexpectedAlarmError implements ErrorType {
     message: string;
 
-    constructor(message: string) {
-        this.message = message;
+    constructor() {
+        this.message = "Unreachable error! Can't clear chrome alarm to pause timer";
     }
 }
-
 
 export namespace PomodoroApi {
     const POMODORO_CHROME_ALARM_NAME = "TimeKeeperPomodoroAlarm";
 
     // Used to set up alarm event listener during background startup
-    export function _Init() {
-        // FIXME: I'll need this later: https://stackoverflow.com/a/14102365/13940541 (what if I just clear all the alarms on start?)
-        // FIXME 2: FUCK! This probably was a bad idea...chrome.alarms.clear(POMODORO_CHROME_ALARM_NAME);
+    export function _InitForBackground() {
         chrome.alarms.onAlarm.addListener(OnChromeAlarm);
     }
 
@@ -68,8 +65,6 @@ export namespace PomodoroApi {
         const lastChromeAlarm: chrome.alarms.Alarm | undefined = await chrome.alarms.get(POMODORO_CHROME_ALARM_NAME);
         // Check if there is any running alarm
         if (lastChromeAlarm === undefined) {
-            // FIXME: most likely this is source of the bug where before timer runs out it returns old data
-            // TODO: research code import and restructure it to use messages
             // If no, return the latest one from storage
             return timerStorageInfoGetter();
         }
@@ -108,6 +103,7 @@ export namespace PomodoroApi {
     // Pauses currently running timer
     export async function Pause(): Promise<Maybe<UnexpectedAlarmError>> {
         // FIXME: Pause is now broken for some reason...It can't get alarm...
+        //  Or does it? (at this point code just fixes and breaks itself sometimes)
         // Step 1. Update timer info in storage to reuse it later (when timer is resumed)
         const chromeAlarm = await chrome.alarms.get(POMODORO_CHROME_ALARM_NAME);
         var timerInfo = timerStorageInfoGetter();
@@ -118,7 +114,7 @@ export namespace PomodoroApi {
         // Step 2. Clear background alarm
         const wasAlarmCleared = await chrome.alarms.clear(POMODORO_CHROME_ALARM_NAME);
         if (!wasAlarmCleared) {
-            return Maybe.Err(new UnexpectedAlarmError("UNEXPECTED ERROR! Can't clear chrome alarm to pause timer"));
+            return Maybe.Err(new UnexpectedAlarmError());
         }
         return Maybe.Ok();
     }
@@ -128,7 +124,7 @@ export namespace PomodoroApi {
         // Check if there is any alarm to pause
         var timerInfo = timerStorageInfoGetter()
         if (!timerInfo.isPaused) {
-            return Maybe.Err(new UnpauseRunningTimerError("Unreachable error! Can't unpause running timer"));
+            return Maybe.Err(new UnpauseRunningTimerError());
         }
         // Step 1. Calculate when "new" background alarm needs to fire
         const totalMsLeft = timerInfo.durationMs - (timerInfo.lastPauseDate - timerInfo.startTimeDate)

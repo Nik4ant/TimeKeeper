@@ -7,7 +7,6 @@ import "./pomodoro.css";
 // Note: Having separate interface feels dumb, but there is no better way to specify type
 interface TimerEditableDisplayProps {
     isPauseFronted: Accessor<boolean>,
-    // Note:
     timerValueMs: Accessor<number>,
     setTimerValueMs: Setter<number>
 }
@@ -25,7 +24,7 @@ const TimerEditableDisplay: Component<TimerEditableDisplayProps> = ({isPauseFron
 
     // Values for countdown
     const totalSecondsLeft = () => timerValueMs() / 1000;
-    // FIXME: WHY ON EARTH THOSE VALUES CAN BE NOT A NUMBER?!
+
     const currentSeconds = () => Math.floor(totalSecondsLeft()) % 60;
     const currentMinutes = () => Math.floor(totalSecondsLeft() / 60) % 60;
     const currentHours = () => Math.floor(totalSecondsLeft() / 3600);
@@ -106,8 +105,7 @@ function Timer() {
     }
     function OneSecondTick() {
         const newMsValue = timerValueMs() - 1000;
-        // FIXME: Values can be negative because they are loaded from backend where precision is higher
-        //  so it's not equal to frontend timer values
+        // Note: Values can be negative because they are loaded from backend where precision is much higher
         if (newMsValue <= 0) {
             clearInterval(timerTickInterval);
             setTimerValueMs(0);
