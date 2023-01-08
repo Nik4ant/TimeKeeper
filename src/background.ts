@@ -1,9 +1,8 @@
-import {PomodoroApi} from "./core/pomodoro_api";
+import {Pomodoro} from "./core/pomodoro_api";
 import {MessageUtil} from "./utils/message_api";
 import {Taboo} from "./core/taboo_api";
 
 
-// That's pretty much it. TODO: work session thingy and combine that with tabs exclusion
 chrome.webNavigation.onCompleted.addListener( (details) => {
     if (Taboo.Api.IsTaboo(details.url)) {
         // TODO MAIN: frame stuff is still needed to check only for final page and not extra content
@@ -19,6 +18,6 @@ chrome.webNavigation.onCompleted.addListener( (details) => {
 });
 // region APIs setup
 MessageUtil._InitForBackground();
-PomodoroApi._InitForBackground();
+Pomodoro.Api._InitForBackground();
 Taboo.Api._InitForBackground();
 // endregion

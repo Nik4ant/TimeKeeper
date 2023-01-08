@@ -3,7 +3,7 @@ import {createStorageSignalAsync} from "../utils/storage_manager"
 import {MessageBasedApi, MessageType} from "../utils/message_api";
 
 export const TABOO_STORAGE_NAME = "TimeKeeperTabooWebsites";
-const [tabooWebsitesGetter, tabooWebsiteSetter] = await createStorageSignalAsync<string[]>(TABOO_STORAGE_NAME, []);
+const [tabooWebsites, setTabooWebsites] = await createStorageSignalAsync<string[]>(TABOO_STORAGE_NAME, []);
 
 
 export namespace Taboo {
@@ -29,42 +29,43 @@ export namespace Taboo {
 
     // Types and containers for messaging system
     export namespace Message {
-        export class Add implements MessageType {
+        export class Add extends MessageType {
             // Note: Again fighting with the fact the interface can't have static values
             static readonly NAME = "TabooMessageAdd";
             messageName: string;
-
             toReceiver: string;
+
             newTabooDomain: string;
             constructor(tabooDomain: string) {
-                this.toReceiver = Api.MESSAGE_RECEIVER_NAME;
+                super(Api.MESSAGE_RECEIVER_NAME);
                 this.newTabooDomain = tabooDomain;
                 this.messageName = Add.NAME;
             }
         }
         export type AddResponse = Maybe<TabooValidationError>;
 
-        export class Remove implements MessageType {
+        export class Remove extends MessageType {
             // Note: Again fighting with the fact the interface can't have static values
             static readonly NAME;
             messageName: string;
-
             toReceiver: string;
+
             tabooDomain: string;
             constructor(tabooDomain: string) {
-                this.toReceiver = Api.MESSAGE_RECEIVER_NAME;
+                super(Api.MESSAGE_RECEIVER_NAME);
                 this.tabooDomain = tabooDomain;
                 this.messageName = Remove.NAME;
             }
         }
         export type RemoveResponse = Maybe<TabooNotExist>;
     }
-    // Api that handles new messages and contains actual api logic
+    // Api that handles new messages and contains taboo api logic
     export class Api extends MessageBasedApi {
         public static override readonly MESSAGE_RECEIVER_NAME: string = "TabooApiReceiver";
 
         static override OnNewMessageReceived(message: Message.Add | Message.Remove): Message.AddResponse | Message.RemoveResponse {
             // Note: There is no better way to check message type (trust me, I've tried...)
+            // TODO: use switch
             if (message.messageName === Message.Add.NAME) {
                 return Api.Add((message as Message.Add).newTabooDomain);
             }
@@ -86,21 +87,21 @@ export namespace Taboo {
             if (tabooDomain.length > MAX_LENGTH) {
                 return Maybe.Err(new TabooValidationError(`${tabooDomain.length} is too long (${tabooDomain.length} > ${MAX_LENGTH})`, "TooLong"));
             }
-            if (tabooWebsitesGetter().indexOf(tabooDomain) !== -1) {
+            if (tabooWebsites().indexOf(tabooDomain) !== -1) {
                 return Maybe.Err(new TabooValidationError(`${tabooDomain} already exists`, "AlreadyExist"));
             }
 
-            tabooWebsiteSetter([...tabooWebsitesGetter(), tabooDomain]);
+            setTabooWebsites([...tabooWebsites(), tabooDomain]);
             return Maybe.Ok();
         }
 
         private static Remove(tabooDomain: string): Maybe<TabooNotExist> {
-            const currentTaboos = tabooWebsitesGetter();
+            const currentTaboos = tabooWebsites();
             const index = currentTaboos.indexOf(tabooDomain);
 
             if (index !== -1) {
                 currentTaboos.splice(index, 1);
-                tabooWebsiteSetter(currentTaboos);
+                setTabooWebsites(currentTaboos);
                 return Maybe.Ok();
             } else {
                 return Maybe.Err(new TabooNotExist(tabooDomain));
@@ -108,7 +109,7 @@ export namespace Taboo {
         }
 
         static IsTaboo(website: string): boolean {
-            for (const tabooDomain of tabooWebsitesGetter()) {
+            for (const tabooDomain of tabooWebsites()) {
                 if (website.indexOf(tabooDomain) !== -1) {
                     return true;
                 }

@@ -1,7 +1,9 @@
 import {createSignal, Accessor, Setter, Component, Show} from "solid-js";
 import {AiOutlinePauseCircle, AiOutlinePlayCircle} from 'solid-icons/ai';
-import {PomodoroApi} from "../../../../core/pomodoro_api";
 import "./pomodoro.css";
+import {Pomodoro} from "../../../../core/pomodoro_api";
+import {Maybe, Result} from "../../../../utils/custom_error";
+import {MessageReceiverNotExist} from "../../../../utils/message_api";
 
 
 // Note: Having separate interface feels dumb, but there is no better way to specify type
@@ -16,8 +18,7 @@ const TimerEditableDisplay: Component<TimerEditableDisplayProps> = ({isPauseFron
         // so extra check for NaN is required
         if (!isNaN(newValueInMs)) {
             setTimerValueMs(newValueInMs);
-        }
-        else {
+        } else {
             setTimerValueMs(0);
         }
     }
@@ -84,23 +85,50 @@ function Timer() {
             if (initialTimerDurationMs() < timerValueMs()) {
                 // Step 2.1 if it is, create a timer
                 setInitialTimerDurationMs(timerValueMs());
-                PomodoroApi.CreateTimer(timerValueMs());
+                chrome.runtime.sendMessage(new Pomodoro.Message.CreateTimer(timerValueMs()))
+                    // Handling possible error from messaging system
+                    .then((response: Maybe<MessageReceiverNotExist>) => {
+                        if (!response.isOk) {
+                            console.error(response.error.message);
+                            alert(response.error.message);
+                        }
+                    });
             }
             else {
                 // Step 2.2 If it's not, unpause existing timer
-                const result = PomodoroApi.Unpause();
-                if (!result.isOk)
-                    alert(result.error.message);
+                chrome.runtime.sendMessage(new Pomodoro.Message.Unpause())
+                    .then((response: Result<Pomodoro.Message.UnpauseResponse, MessageReceiverNotExist>) => {
+                        // Handling possible error from messaging system
+                        if (!response.isOk) {
+                            console.error(response.error.message);
+                            alert(response.error.message);
+                        }
+                        else {
+                            const result = response.value;
+                            // Handling possible error from the UnpauseResponse
+                            if (!result.isOk) {
+                                console.error(response.error.message);
+                                alert(response.error.message);
+                            }
+                        }
+                    });
+
             }
             timerTickInterval = setInterval(OneSecondTick, 1000);
         }
         // Pause icon was pressed
         else {
             clearInterval(timerTickInterval);
-            PomodoroApi.Pause().then(result => {
-                if (!result.isOk)
-                    alert(result.error.message);
-            });
+            chrome.runtime.sendMessage(new Pomodoro.Message.Pause())
+                .then((response: Pomodoro.Message.PauseResponse) => {
+                    // Response is a promise, so after chrome message need to wait for result as well
+                    Promise.resolve(response).then((result) => {
+                        if (!result.isOk) {
+                            alert(result.error.message);
+                            console.error(result.error.message);
+                        }
+                    });
+                });
         }
     }
     function OneSecondTick() {
@@ -116,17 +144,28 @@ function Timer() {
     }
 
     // Loading the latest timer info
-    PomodoroApi.GetLatestTimer().then((timerInfo) => {
-        // 1) Set values for visual elements
-        setIsPauseFrontend(timerInfo.isPaused);
-        setTimerValueMs(timerInfo.timeLeftMs);
-        // 2) If there is ongoing timer in the background starting interval immediately
-        if (!timerInfo.isPaused)
-            timerTickInterval = setInterval(OneSecondTick, 1000);
-        // 3) Since signal value can't be 0 extra check is necessary
-        if (timerInfo.durationMs !== 0)
-            setInitialTimerDurationMs(timerInfo.durationMs);
-    });
+    chrome.runtime.sendMessage(new Pomodoro.Message.GetTimer())
+        .then((response: Result<Pomodoro.Message.GetTimerResponse, MessageReceiverNotExist>) => {
+            // Handling possible error from messaging system
+            if (!response.isOk) {
+                console.error(response.error);
+                alert(response.error);
+                return;
+            }
+            // Response is a promise, so need to wait for result as well
+            Promise.resolve(response.value)
+                .then((timerInfo) => {
+                    // 1) Set values for visual elements
+                    setIsPauseFrontend(timerInfo.isPaused);
+                    setTimerValueMs(timerInfo.timeLeftMs);
+                    // 2) If there is ongoing timer in the background starting interval immediately
+                    if (!timerInfo.isPaused)
+                        timerTickInterval = setInterval(OneSecondTick, 1000);
+                    // 3) Since signal value can't be 0 extra check is necessary
+                    if (timerInfo.durationMs !== 0)
+                        setInitialTimerDurationMs(timerInfo.durationMs);
+                });
+        });
 
     return <>
         <div class="radial-progress text-primary z-0" style={{"--value": timeLeftInPercentage(),
@@ -144,6 +183,10 @@ function Timer() {
             </div>
         </div>
     </>
+}
+
+function PomodoroForm() {
+
 }
 
 export default function PomodoroRoot() {

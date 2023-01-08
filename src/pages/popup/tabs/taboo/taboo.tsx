@@ -9,15 +9,19 @@ function TabooForm() {
 
     function addTaboo(tabooDomain: string) {
         // Send message to the background to add taboo
-        chrome.runtime.sendMessage(new Taboo.Message.Add(tabooDomain), (response: Taboo.Message.AddResponse) => {
-            if (!response.isOk)
-                setCurrentError(response.error.message);
-            else {
-                setCurrentError('');
-                // Clear input field when taboo was successfully added
-                tabooInputElement.value = "";
-            }
-        });
+        chrome.runtime.sendMessage(new Taboo.Message.Add(tabooDomain))
+            .then((response: Taboo.Message.AddResponse) => {
+                if (!response.isOk)
+                    setCurrentError(response.error.message);
+                else {
+                    setCurrentError('');
+                    // Clear input field when taboo was successfully added
+                    tabooInputElement.value = "";
+                }
+            })
+            .catch(() => {
+                alert("Unpredictable error while trying to add taboo!");
+            });
     }
 
 
@@ -47,11 +51,15 @@ function TabooForm() {
 
 function TabooWebsite(props) {
     function removeTaboo(tabooDomain: string) {
-        chrome.runtime.sendMessage(new Taboo.Message.Remove(tabooDomain), (response: Taboo.Message.RemoveResponse) => {
-            // Error might occur, but only in wierd cases if something wrong with the code
-            if (!response.isOk)
-                alert(`Unpredictable error. Contact the developer if possible. Thank you. Error message:\n${response.error.message}`);
-        });
+        chrome.runtime.sendMessage(new Taboo.Message.Remove(tabooDomain))
+            .then((response: Taboo.Message.RemoveResponse) => {
+                // Error might occur, but only in wierd cases if something wrong with the code
+                if (!response.isOk)
+                    alert(`Unpredictable error. Contact the developer if possible. Thank you. Error message:\n${response.error.message}`);
+            })
+            .catch(() => {
+                alert("Unpredictable error while trying to remove taboo!");
+            });
     }
 
     const deleteIcon = (<RiSystemDeleteBin2Line size={24} class={"text-error"}

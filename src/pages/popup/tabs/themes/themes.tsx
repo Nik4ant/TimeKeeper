@@ -1,5 +1,5 @@
 import {For} from "solid-js";
-import {SetTheme, availableThemesGetter, currentThemeGetter} from "../../../../core/themes_manager";
+import {SetTheme, availableThemes, currentTheme} from "../../../../core/themes_manager";
 
 
 function ThemeSwitcher() {
@@ -12,10 +12,10 @@ function ThemeSwitcher() {
     // Design is based on daisyUI theme switcher here: https://daisyui.com/docs/themes/
     return <>
         <div class="grid grid-cols-3 gap-4 p-4">
-            <For each={availableThemesGetter()}>{(theme, i) =>
+            <For each={availableThemes()}>{(theme, i) =>
                 <div class="border-base-content/20 hover:border-base-content/40 outline-base-content overflow-hidden
                 rounded-lg border outline-2 outline-offset-2" data-set-theme={theme} data-act-class="outline"
-                     classList={{"border-accent hover:border-accent": currentThemeGetter() === theme}}>
+                     classList={{"border-accent hover:border-accent": currentTheme() === theme}}>
                     <div data-theme={theme} class="bg-base-100 text-base-content cursor-pointer">
                         <div class="grid grid-cols-5 grid-rows-3">
                             <div onClick={() => switchTheme(theme)} class="col-span-5 row-span-3 row-start-1 flex gap-1 py-3 px-4">
