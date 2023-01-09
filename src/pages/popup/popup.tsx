@@ -1,10 +1,10 @@
 import "./popup.css";
-import { TimeKeeperLogo } from "../common/components";
-import { Dynamic, render } from "solid-js/web";
-import { createSignal, For } from "solid-js";
-import { FaSolidBusinessTime } from 'solid-icons/fa';
-import { IoColorPaletteSharp } from 'solid-icons/io'
-import { RiDocumentFileForbidLine } from 'solid-icons/ri'
+import {TimeKeeperLogo} from "../common/components";
+import {Dynamic, render} from "solid-js/web";
+import {createSignal, For} from "solid-js";
+import {FaSolidBusinessTime} from 'solid-icons/fa';
+import {IoColorPaletteSharp} from 'solid-icons/io'
+import {RiDocumentFileForbidLine} from 'solid-icons/ri'
 import ThemesRoot from "./tabs/themes/themes";
 import TabooRoot from "./tabs/taboo/taboo";
 import PomodoroRoot from "./tabs/pomodoro/pomodoro";
@@ -38,7 +38,6 @@ function Navbar(props) {
 function PopupRoot() {
     const [activeTab, setActiveTab] = createSignal(0);
 
-    // TODO: typography doesn't change anything no matter how I try (google tutorials for that)
     return <>
         <div class="flex flex-col w-full p-4 prose prose-slate">
             <Navbar activeTab={activeTab()} setActiveTab={setActiveTab} />

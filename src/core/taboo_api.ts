@@ -64,16 +64,13 @@ export namespace Taboo {
         public static override readonly MESSAGE_RECEIVER_NAME: string = "TabooApiReceiver";
 
         static override OnNewMessageReceived(message: Message.Add | Message.Remove): Message.AddResponse | Message.RemoveResponse {
-            // Note: There is no better way to check message type (trust me, I've tried...)
-            // TODO: use switch
-            if (message.messageName === Message.Add.NAME) {
-                return Api.Add((message as Message.Add).newTabooDomain);
-            }
-            else if (message.messageName === Message.Remove.NAME) {
-                return Api.Remove((message as Message.Remove).tabooDomain);
-            }
-            else {
-                console.error(`Unpredictable error! Unexpected message "${message}" to receiver "${Api.MESSAGE_RECEIVER_NAME}"`);
+            switch (message.messageName) {
+                case Message.Add.NAME:
+                    return Api.Add((message as Message.Add).newTabooDomain);
+                case Message.Remove.NAME:
+                    return Api.Remove((message as Message.Remove).tabooDomain);
+                default:
+                    console.error(`Unpredictable error! Unexpected message "${message}" to receiver "${Api.MESSAGE_RECEIVER_NAME}"`);
             }
         }
 

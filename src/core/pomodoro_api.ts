@@ -3,11 +3,16 @@ import {ErrorType, Maybe} from "../utils/custom_error";
 import {MessageBasedApi, MessageType} from "../utils/message_api";
 
 /*
+Very important explanation on how the whole timer system works:
+
+chrome.alarms is an api for making periodic stuff, and it has one serious limitation.
 Quote from docs: "...setting delayInMinutes or periodInMinutes to less than 1 will not be honored and will cause
-a warning. when can be set to less than 1 minute after "now" without warning but won't actually cause the alarm to
+a warning. when [when is parameter for setting UNIX time] can be set to less than 1 minute after "now" without warning but won't actually cause the alarm to
 fire for at least 1 minute". Source: https://developer.chrome.com/docs/extensions/reference/alarms/#method-create
 
-TODO: finish explanation of the trick used here
+TODO: test if 1 second timer actually works on end user machine (because it might work only because of dev mode)
+In order to make timer with 1 second precession following trick was used...
+When user creates a timer alarm is set
 */
 
 //region Timer info
@@ -41,7 +46,7 @@ const DEFAULT_POMODORO_INFO: PomodoroInfo = {
     workingSessionDurationMs: 45,
     breakDurationMs: 15,
     longBreakDurationMs: 25,
-    isWorkingSession: true,
+    isWorkingSession: true,  // TODO: display current state with smth like a switch below timer
 }
 const POMODORO_INFO_STORAGE_NAME = "TimeKeeperPomodoroInfo";
 const [pomodoroInfoStorage, setPomodoroInfoStorage] = await createStorageSignalAsync<PomodoroInfo>(POMODORO_INFO_STORAGE_NAME, DEFAULT_POMODORO_INFO);
@@ -163,31 +168,21 @@ export namespace Pomodoro {
         private static readonly POMODORO_CHROME_ALARM_NAME = "TimeKeeperPomodoroAlarm";
 
         static override OnNewMessageReceived(message): Message.PauseResponse | Message.UnpauseResponse | Message.GetTimerResponse | Message.GetInfoResponse | void {
-            // Note: There is no better way to check message type (trust me, I've tried...)
-            // TODO: use switch
-
-            // FIXME: error occurs because runtime.sendMessage doesn't work too well with promises
-            console.log(message.messageName, message.toReceiver);
-            if (message.messageName === Message.Pause.NAME) {
-                return Api.Pause();
-            }
-            else if (message.messageName === Message.Unpause.NAME) {
-                return Api.Unpause();
-            }
-            else if (message.messageName === Message.CreateTimer.NAME) {
-                return Api.CreateTimer((message as Message.CreateTimer).timerDurationMs);
-            }
-            else if (message.messageName === Message.GetTimer.NAME) {
-                return Api.GetLatestTimer();
-            }
-            else if (message.messageName === Message.SetInfo.NAME) {
-                return Api.SetInfo((message as Message.SetInfo).newInfo);
-            }
-            else if (message.messageName === Message.GetInfo.NAME) {
-                return Api.GetInfo();
-            }
-            else {
-                console.error(`Unpredictable error! Unexpected message "${message}" to receiver "${Api.MESSAGE_RECEIVER_NAME}"`);
+            switch (message.messageName) {
+                case Message.Pause.NAME:
+                    return Api.Pause();
+                case Message.Unpause.NAME:
+                    return Api.Unpause();
+                case Message.CreateTimer.NAME:
+                    return Api.CreateTimer((message as Message.CreateTimer).timerDurationMs);
+                case Message.GetTimer.NAME:
+                    return Api.GetLatestTimer();
+                case Message.SetInfo.NAME:
+                    return Api.SetInfo((message as Message.SetInfo).newInfo);
+                case Message.GetInfo.NAME:
+                    return Api.GetInfo();
+                default:
+                    console.error(`Unpredictable error! Unexpected message "${message}" to receiver "${Api.MESSAGE_RECEIVER_NAME}"`);
             }
         }
 
@@ -199,19 +194,40 @@ export namespace Pomodoro {
         private static OnChromeAlarm(alarm: chrome.alarms.Alarm): void {
             // Check if alarm is related to pomodoro
             if (alarm.name === Api.POMODORO_CHROME_ALARM_NAME) {
-                // Resetting timer
+                // Step 1. Reset timer
                 setTimerInfoStorage(DEFAULT_TIMER_INFO);
                 // "Alarm"
                 console.log("ALARM ENDED! BIP-BOP; BIP-BOP...");
+
+                // Step 2. Send notification
+                var notificationMessage: string;
+                var notificationIconUrl: string;
+                if (pomodoroInfoStorage().isWorkingSession) {
+                    // TODO: Icon for rest notification
+                    notificationIconUrl = chrome.runtime.getURL("work_notification_icon.png");
+                    notificationMessage = "Timer! End of working session. You can rest now..."
+                } else {
+                    notificationIconUrl = chrome.runtime.getURL("work_notification_icon.png");
+                    notificationMessage = "Timer! End of rest time. Good luck and get some work done!"
+                }
+                chrome.notifications.create({
+                    type: "basic",
+                    iconUrl: notificationIconUrl,
+                    title: "TimeKeeper",
+                    message: notificationMessage,
+                    priority: 2
+                });
+                // Step 3. Update pomodoro info session status
+                var pomodoroInfo = pomodoroInfoStorage();
+                pomodoroInfo.isWorkingSession = !pomodoroInfo.isWorkingSession;
+                setPomodoroInfoStorage(pomodoroInfo);
             }
         }
 
         private static async GetLatestTimer(): Promise<TimerInfo> {
             const lastChromeAlarm: chrome.alarms.Alarm | undefined = await chrome.alarms.get(Api.POMODORO_CHROME_ALARM_NAME);
             // Check if there is any running alarm
-            console.log("Chrome alarm: ", lastChromeAlarm);
             if (lastChromeAlarm === undefined) {
-                console.log("Returning storage value: ", timerInfoStorage());
                 // If no, return the latest one from storage
                 return timerInfoStorage();
             }
@@ -264,7 +280,8 @@ export namespace Pomodoro {
             // Step 2. Clear background alarm
             const wasAlarmCleared = await chrome.alarms.clear(Api.POMODORO_CHROME_ALARM_NAME);
             if (!wasAlarmCleared) {
-                return Maybe.Err(new UnexpectedAlarmError("Unreachable error! Can't clear chrome alarm to pause timer"));
+                chrome.alarms.clearAll();
+                return Maybe.Err(new UnexpectedAlarmError("Unreachable error! Can't clear chrome alarm to pause timer.\nTo fix this all alarms were cleared"));
             }
             return Maybe.Ok();
         }

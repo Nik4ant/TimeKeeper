@@ -2,8 +2,8 @@ import {createSignal, Accessor, Setter, Component, Show} from "solid-js";
 import {AiOutlinePauseCircle, AiOutlinePlayCircle} from 'solid-icons/ai';
 import "./pomodoro.css";
 import {Pomodoro} from "../../../../core/pomodoro_api";
-import {Maybe, Result} from "../../../../utils/custom_error";
-import {MessageReceiverNotExist} from "../../../../utils/message_api";
+import {Unreachable} from "../../../../utils/custom_error";
+import {SendChromeMessage} from "../../../../utils/message_api";
 
 
 // Note: Having separate interface feels dumb, but there is no better way to specify type
@@ -58,9 +58,6 @@ function Timer() {
     const [initialTimerDurationMs, setInitialTimerDurationMs] = createSignal(1);
     // Used as a parameter for
     const timeLeftInPercentage = () => {
-        if (initialTimerDurationMs() === 1 && timerValueMs() === 0) {
-            return 0;
-        }
         return timerValueMs() * 100 / initialTimerDurationMs();
     };
     // Only indicates pause for frontend elements. Changes in background code occur only if specific API was called
@@ -85,49 +82,49 @@ function Timer() {
             if (initialTimerDurationMs() < timerValueMs()) {
                 // Step 2.1 if it is, create a timer
                 setInitialTimerDurationMs(timerValueMs());
-                chrome.runtime.sendMessage(new Pomodoro.Message.CreateTimer(timerValueMs()))
-                    // Handling possible error from messaging system
-                    .then((response: Maybe<MessageReceiverNotExist>) => {
+                SendChromeMessage(new Pomodoro.Message.CreateTimer(timerValueMs()))
+                    .then((response) => {
+                        // Handling possible error from messaging system
                         if (!response.isOk) {
-                            console.error(response.error.message);
-                            alert(response.error.message);
+                            Unreachable(response.error.message);
                         }
                     });
             }
             else {
                 // Step 2.2 If it's not, unpause existing timer
-                chrome.runtime.sendMessage(new Pomodoro.Message.Unpause())
-                    .then((response: Result<Pomodoro.Message.UnpauseResponse, MessageReceiverNotExist>) => {
-                        // Handling possible error from messaging system
+                SendChromeMessage<Pomodoro.Message.UnpauseResponse>(new Pomodoro.Message.Unpause())
+                    .then((response) => {
+                        // Handling possible error from the messaging system
                         if (!response.isOk) {
-                            console.error(response.error.message);
-                            alert(response.error.message);
-                        }
-                        else {
+                            Unreachable(response.error.message);
+                        } else {
                             const result = response.value;
-                            // Handling possible error from the UnpauseResponse
+                            // Handling possible error from the API
                             if (!result.isOk) {
-                                console.error(response.error.message);
-                                alert(response.error.message);
+                                Unreachable(response.error.message);
                             }
                         }
                     });
-
             }
             timerTickInterval = setInterval(OneSecondTick, 1000);
         }
         // Pause icon was pressed
         else {
             clearInterval(timerTickInterval);
-            chrome.runtime.sendMessage(new Pomodoro.Message.Pause())
-                .then((response: Pomodoro.Message.PauseResponse) => {
-                    // Response is a promise, so after chrome message need to wait for result as well
-                    Promise.resolve(response).then((result) => {
-                        if (!result.isOk) {
-                            alert(result.error.message);
-                            console.error(result.error.message);
-                        }
-                    });
+            SendChromeMessage<Pomodoro.Message.PauseResponse>(new Pomodoro.Message.Pause())
+                .then((response) => {
+                    // Handling possible error from the messaging system
+                    if (!response.isOk) {
+                        Unreachable(response.error.message);
+                    } else {
+                        // Response value is a promise, so need to wait for result as well
+                        Promise.resolve(response.value).then((result) => {
+                            // Handling possible error from the API
+                            if (!result.isOk) {
+                                Unreachable(result.error.message);
+                            }
+                        });
+                    }
                 });
         }
     }
@@ -144,15 +141,14 @@ function Timer() {
     }
 
     // Loading the latest timer info
-    chrome.runtime.sendMessage(new Pomodoro.Message.GetTimer())
-        .then((response: Result<Pomodoro.Message.GetTimerResponse, MessageReceiverNotExist>) => {
-            // Handling possible error from messaging system
+    SendChromeMessage<Pomodoro.Message.GetTimerResponse>(new Pomodoro.Message.GetTimer())
+        .then((response) => {
+            // Handling possible error from the messaging system
             if (!response.isOk) {
-                console.error(response.error);
-                alert(response.error);
+                Unreachable(response.error.message);
                 return;
             }
-            // Response is a promise, so need to wait for result as well
+            // Response value is a promise, so need to wait for result as well
             Promise.resolve(response.value)
                 .then((timerInfo) => {
                     // 1) Set values for visual elements
@@ -186,13 +182,16 @@ function Timer() {
 }
 
 function PomodoroForm() {
-
+    return <>
+        <p>Yet to be implemented</p>
+    </>
 }
 
 export default function PomodoroRoot() {
     return <>
         <div class="flex justify-center p-2">
             <Timer />
+            <PomodoroForm />
         </div>
     </>
 }

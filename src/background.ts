@@ -4,10 +4,10 @@ import {Taboo} from "./core/taboo_api";
 
 
 chrome.webNavigation.onCompleted.addListener( (details) => {
-    if (Taboo.Api.IsTaboo(details.url)) {
-        // TODO MAIN: frame stuff is still needed to check only for final page and not extra content
-        console.log(details);  // debug only
-
+    // Note: Websites can load some content from taboo pages. To prevent false positive, check frameType
+    // to see if this is an actual website or a resource fetched from other website
+    // @ts-ignore (ts wrongly assumes that frameType doesn't exist)
+    if (Taboo.Api.IsTaboo(details.url) && details.frameType === "outermost_frame") {
         // Try to go back
         chrome.tabs.goBack(details.tabId)
             .catch(() => {

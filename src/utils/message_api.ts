@@ -7,7 +7,8 @@ export abstract class MessageType {
     // Indicates if message is designed to work with async function
     readonly isAsync: boolean = false;
     // Used to distinguish messages
-    protected abstract readonly messageName: string;
+    // Note: There is no better/cleaner way to check message type (trust me, I've tried...)
+    abstract readonly messageName: string;
 
     protected constructor(toReceiver: string) {
        this.toReceiver = toReceiver;
@@ -41,12 +42,10 @@ export class MessageBasedApi {
             // Otherwise extension can't continue working, so error time... :(
             throw new Error("Receiver name for an API isn't implemented, but must be!");
         }
-        console.log("Adding receiver for: ", this.MESSAGE_RECEIVER_NAME);
         MessageUtil.AddReceiver(this.MESSAGE_RECEIVER_NAME, this.OnNewMessageReceived);
     }
 }
 
-// TODO: add support and handler for this error everywhere
 export class MessageReceiverNotExist implements ErrorType {
     message: string;
     toReceiver: string;
@@ -65,6 +64,13 @@ class MessageReceiverAlreadyExist implements ErrorType {
         this.message = `Can't add receiver with name: "${receiverName}" because it's already exist`;
     }
 }
+class UnexpectedChromeRuntimeError implements ErrorType {
+    message: string;
+
+    constructor(message: string) {
+        this.message = message;
+    }
+}
 
 // Makes messaging between frontend page and background script
 export namespace MessageUtil {
@@ -74,17 +80,23 @@ export namespace MessageUtil {
         chrome.runtime.onMessage.addListener(OnNewChromeMessage);
     }
 
-    function OnNewChromeMessage(message: MessageType, sender, sendResponse): void | true {
+    function OnNewChromeMessage(message: MessageType, _, sendResponse: (response: Result<any, ErrorType>) => void | Promise<void>): void | true {
         var messageReceiver = messageReceivers().find(r => r["name"] === message.toReceiver);
         if (messageReceiver === undefined) {
             sendResponse(Result.Err(new MessageReceiverNotExist(message.toReceiver)));
         }
         else {
-            // returning true is required for chrome messaging to work with async
+            console.log(message.toReceiver, message.messageName, message.isAsync);
             if (message.isAsync) {
+                // If function is async with need to wait for its result first
+                messageReceiver.onMessageReceived(message).then((response) => {
+                    sendResponse(Result.Ok(response));
+                });
+                // returning true indicates to chrome messaging that there is an async function
                 return true;
+            } else {
+                sendResponse(Result.Ok(messageReceiver.onMessageReceived(message)));
             }
-            sendResponse(Result.Ok(messageReceiver.onMessageReceived(message)));
         }
 
     }
@@ -101,4 +113,20 @@ export namespace MessageUtil {
         }]);
         return Maybe.Ok();
     }
+}
+
+export async function SendChromeMessage<T = void>(message: MessageType): Promise<Result<T, UnexpectedChromeRuntimeError | MessageReceiverNotExist>> {
+    // FIXME: Uncaught (in promise) Error: Could not establish connection. Receiving end does not exist.
+    // TODO: add try catch because at this point I have no idea what is causing the issue sometimes
+    // Send chrome message
+    const response: Result<T, MessageReceiverNotExist> = await chrome.runtime.sendMessage(message);
+    // Check for errors from chrome and messaging system
+    if (chrome.runtime.lastError !== undefined) {
+        return Result.Err(new UnexpectedChromeRuntimeError(`Try again! Chrome error: "${chrome.runtime.lastError.message}"`));
+    }
+    if (!response.isOk) {
+        return Result.Err(response.error);
+    }
+
+    return Result.Ok(response.value);
 }

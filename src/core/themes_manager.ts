@@ -24,7 +24,6 @@ const LATEST_THEME_STORAGE_NAME = "TimeKeeperLatestTheme";
 let [currentTheme, setCurrentTheme] = await createStorageSignalAsync<string>(LATEST_THEME_STORAGE_NAME, DEFAULT_THEMES[0]);
 // Set theme on load
 SetTheme(currentTheme());
-// TODO: ability to add custom themes
 // WARNING: This will work fine as long as themes are constant values and can't be created by user
 export {currentTheme};
 

@@ -2,6 +2,8 @@ import {createSignal, For, Show} from "solid-js";
 import {TABOO_STORAGE_NAME, Taboo} from "../../../../core/taboo_api";
 import {RiSystemDeleteBin2Line} from "solid-icons/ri";
 import {connectToStorageSignalAsync} from "../../../../utils/storage_manager";
+import {Unreachable} from "../../../../utils/custom_error";
+import {SendChromeMessage} from "../../../../utils/message_api";
 
 
 function TabooForm() {
@@ -9,18 +11,21 @@ function TabooForm() {
 
     function addTaboo(tabooDomain: string) {
         // Send message to the background to add taboo
-        chrome.runtime.sendMessage(new Taboo.Message.Add(tabooDomain))
-            .then((response: Taboo.Message.AddResponse) => {
-                if (!response.isOk)
-                    setCurrentError(response.error.message);
-                else {
-                    setCurrentError('');
-                    // Clear input field when taboo was successfully added
-                    tabooInputElement.value = "";
+        SendChromeMessage<Taboo.Message.AddResponse>(new Taboo.Message.Add(tabooDomain))
+            .then((response) => {
+                // Handling possible error from the messaging system
+                if (!response.isOk) {
+                    Unreachable(response.error.message);
+                } else {
+                    // Handling possible error from the API
+                    if (!response.isOk) {
+                        setCurrentError(response.error.message);
+                    } else {
+                        setCurrentError('');
+                        // Clear input field when taboo was successfully added
+                        tabooInputElement.value = "";
+                    }
                 }
-            })
-            .catch(() => {
-                alert("Unpredictable error while trying to add taboo!");
             });
     }
 
@@ -51,21 +56,25 @@ function TabooForm() {
 
 function TabooWebsite(props) {
     function removeTaboo(tabooDomain: string) {
-        chrome.runtime.sendMessage(new Taboo.Message.Remove(tabooDomain))
-            .then((response: Taboo.Message.RemoveResponse) => {
-                // Error might occur, but only in wierd cases if something wrong with the code
-                if (!response.isOk)
-                    alert(`Unpredictable error. Contact the developer if possible. Thank you. Error message:\n${response.error.message}`);
-            })
-            .catch(() => {
-                alert("Unpredictable error while trying to remove taboo!");
+        SendChromeMessage<Taboo.Message.RemoveResponse>(new Taboo.Message.Remove(tabooDomain))
+            .then((response) => {
+                // Handling possible error from the messaging system
+                if (!response.isOk) {
+                    Unreachable(response.error.message);
+                } else {
+                    // Handling possible error from the API
+                    const result = response.value;
+                    if (!result.isOk) {
+                        Unreachable(result.error.message);
+                    }
+                }
             });
     }
 
     const deleteIcon = (<RiSystemDeleteBin2Line size={24} class={"text-error"}
                                                 onClick={_ => removeTaboo(props.website)} /> as HTMLOrSVGImageElement);
     const tabooWebsite = (<p class="flex-1 font-medium text-base text-base-content">{props.website}</p> as HTMLParagraphElement);
-    // Special hover effect (taboo websites is crossed when delete icon is hovered
+    // Special hover effect (taboo website is crossed when delete icon is hovered
     const HOVER_EFFECT_CLASSES = ["line-through", "decoration-error", "decoration-4"];
     deleteIcon.addEventListener("mouseover", (_) => tabooWebsite.classList.add(...HOVER_EFFECT_CLASSES));
     deleteIcon.addEventListener("mouseout", (_) => tabooWebsite.classList.remove(...HOVER_EFFECT_CLASSES));
@@ -90,7 +99,7 @@ export default function TabooRoot() {
         <div>
             <TabooForm />
             <div>
-                <For each={storageTabooGetter()}>{(tabooWebsite, i) =>
+                <For each={storageTabooGetter()}>{(tabooWebsite, _) =>
                     <TabooWebsite website={tabooWebsite} />
                 }</For>
             </div>
