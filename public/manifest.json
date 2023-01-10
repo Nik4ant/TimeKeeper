@@ -1,6 +1,6 @@
 {
-    "name": "TimeKeeper V2.0",
-    "description": "Help you to achieve effective work/rest balance and reduce procrastination time to 0",
+    "name": "TimeKeeper",
+    "description": "Helps you to achieve effective work/rest balance and reduce procrastination time to 0",
     "version": "1.0",
     "manifest_version": 3,
     "background": {
@@ -8,7 +8,7 @@
     },
     "permissions": [
         "storage",
-        "webNavigation",
+        "tabs",
         "alarms",
         "notifications"
     ],

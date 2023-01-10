@@ -3,16 +3,14 @@ import {MessageUtil} from "./utils/message_api";
 import {Taboo} from "./core/taboo_api";
 
 
-chrome.webNavigation.onCompleted.addListener( (details) => {
-    // Note: Websites can load some content from taboo pages. To prevent false positive, check frameType
-    // to see if this is an actual website or a resource fetched from other website
-    // @ts-ignore (ts wrongly assumes that frameType doesn't exist)
-    if (Taboo.Api.IsTaboo(details.url) && details.frameType === "outermost_frame") {
-        // Try to go back
-        chrome.tabs.goBack(details.tabId)
+chrome.tabs.onUpdated.addListener(  (tabId, changeInfo, _) => {
+    // Check if new url (if any) is taboo
+    if (changeInfo.url !== undefined && Taboo.Api.IsTaboo(changeInfo.url)) {
+        // Try to go back to prevent opening of taboo website
+        chrome.tabs.goBack(tabId)
             .catch(() => {
                 // Sometimes there is no go back option. In this case close the taboo tab
-                chrome.tabs.remove(details.tabId);
+                chrome.tabs.remove(tabId);
             });
     }
 });
