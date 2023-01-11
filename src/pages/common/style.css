@@ -11,7 +11,7 @@
     }
 }
 
-.secondary-text-gradient {
+.secondary-gradient-anim-text {
     @apply bg-clip-text text-transparent bg-gradient-to-r from-secondary to-secondary-focus;
     background-size: 200%;
     animation: gradient-scrolling 5s ease-in-out infinite;

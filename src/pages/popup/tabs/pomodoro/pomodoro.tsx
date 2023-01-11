@@ -183,7 +183,7 @@ function Timer() {
 
 function PomodoroForm() {
     return <>
-        <p>Yet to be implemented</p>
+        <h1 class="text-lg">Yet to be implemented</h1>
     </>
 }
 

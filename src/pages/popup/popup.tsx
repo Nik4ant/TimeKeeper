@@ -39,7 +39,7 @@ function PopupRoot() {
     const [activeTab, setActiveTab] = createSignal(0);
 
     return <>
-        <div class="flex flex-col w-full p-4 prose prose-slate">
+        <div class="flex flex-col w-full p-4">
             <Navbar activeTab={activeTab()} setActiveTab={setActiveTab} />
             <Dynamic component={TABS[activeTab()][0]} />
         </div>

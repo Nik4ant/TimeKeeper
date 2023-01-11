@@ -13,7 +13,7 @@ class ThemeNotExist implements ErrorType {
 }
 
 
-const DEFAULT_THEMES = ["night", "forest", "dark", "light", "cyberpunk"];
+const DEFAULT_THEMES = ["night", "forest", "dark", "dracula", "business", "light", "autumn", "winter", "bumblebee", "cyberpunk"];
 // Signal for list of available themes
 const THEMES_STORAGE_NAME = "TimeKeeperThemes";
 export let [availableThemes, setAvailableThemes] = await createStorageSignalAsync<string[]>(THEMES_STORAGE_NAME, DEFAULT_THEMES);

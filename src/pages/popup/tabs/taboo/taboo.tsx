@@ -4,6 +4,7 @@ import {RiSystemDeleteBin2Line} from "solid-icons/ri";
 import {connectToStorageSignalAsync} from "../../../../utils/storage_manager";
 import {Unreachable} from "../../../../utils/custom_error";
 import {SendChromeMessage} from "../../../../utils/message_api";
+import "./taboo.css";
 
 
 function TabooForm() {
@@ -18,8 +19,9 @@ function TabooForm() {
                     Unreachable(response.error.message);
                 } else {
                     // Handling possible error from the API
-                    if (!response.isOk) {
-                        setCurrentError(response.error.message);
+                    const result = response.value;
+                    if (!result.isOk) {
+                        setCurrentError(result.error.message);
                     } else {
                         setCurrentError('');
                         // Clear input field when taboo was successfully added
@@ -29,10 +31,9 @@ function TabooForm() {
             });
     }
 
-
-    const tabooInputElement = (<input class="input bg-base-300 border-base-content border-r-0 w-1/2 p-1.5 text-lg focus:outline-none focus:border-primary-focus"
-                                      classList={{"border-error focus:border-error": currentError().length !== 0}}
-                                      type="text" placeholder="example.com" maxLength={Taboo.MAX_LENGTH}/>) as HTMLInputElement;
+    const tabooInputElement = (<input class="url-input w-1/2 p-1.5" type="text" placeholder="example.com"
+                                      name="tabooInputElement" maxLength={Taboo.MAX_LENGTH}
+                                      classList={{"!border-error !focus:border-error": currentError().length !== 0}} />) as HTMLInputElement;
     tabooInputElement.addEventListener("keyup", (e) => {
         if (e.key.toLowerCase() === "enter")
             addTaboo(tabooInputElement.value);
@@ -42,10 +43,10 @@ function TabooForm() {
             <label class="label">
                 <span class="label-text text-lg font-medium">Enter taboo domain:</span>
             </label>
-            <label class="input-group">
-                <span class="border-2 border-r-0 border-base-content">https://</span>
+            <label class="input-group url-input-container" >
+                <span class="bg-opacity-0 url-input-tag"
+                      classList={{"!border-error !focus:border-error": currentError().length !== 0}}>https:///</span>
                 {tabooInputElement}
-                <button onClick={() => addTaboo(tabooInputElement.value)} class="btn btn-primary items-center justify-center rounded-box">Add</button>
             </label>
             <Show when={currentError().length !== 0}>
                 <p class="mt-2 ml-2 text-lg font-medium text-error">{currentError()}</p>
@@ -73,14 +74,14 @@ function TabooWebsite(props) {
 
     const deleteIcon = (<RiSystemDeleteBin2Line size={24} class={"text-error"}
                                                 onClick={_ => removeTaboo(props.website)} /> as HTMLOrSVGImageElement);
-    const tabooWebsite = (<p class="flex-1 font-medium text-base text-base-content">{props.website}</p> as HTMLParagraphElement);
+    const tabooWebsite = (<span class="font-medium text-base">{props.website}</span> as HTMLSpanElement);
     // Special hover effect (taboo website is crossed when delete icon is hovered
     const HOVER_EFFECT_CLASSES = ["line-through", "decoration-error", "decoration-4"];
     deleteIcon.addEventListener("mouseover", (_) => tabooWebsite.classList.add(...HOVER_EFFECT_CLASSES));
     deleteIcon.addEventListener("mouseout", (_) => tabooWebsite.classList.remove(...HOVER_EFFECT_CLASSES));
 
     return <>
-        <div class="flex space-x-2 items-center m-2 p-2.5 bg-base-300 border border-accent-focus rounded-md">
+        <div class="taboo-website-container m-2 p-2.5">
             {tabooWebsite}
             {deleteIcon}
         </div>
@@ -98,7 +99,7 @@ export default function TabooRoot() {
     return <>
         <div>
             <TabooForm />
-            <div>
+            <div class="grid grid-cols-2 gap-x-4">
                 <For each={storageTabooGetter()}>{(tabooWebsite, _) =>
                     <TabooWebsite website={tabooWebsite} />
                 }</For>
