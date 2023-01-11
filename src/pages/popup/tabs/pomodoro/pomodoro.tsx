@@ -169,7 +169,7 @@ function Timer() {
             <div class="flex flex-col justify-center">
                 <TimerEditableDisplay isPauseFronted={isPauseFronted} timerValueMs={timerValueMs} setTimerValueMs={setTimerValueMs} />
                 <div class="absolute bottom-5 left-1/2 right-1/2 flex justify-center">
-                    <label class="h-1/2 swap swap-rotate text-secondary">
+                    <label class="h-1/2 swap swap-rotate text-secondary hover:text-secondary-focus">
                         <input type="checkbox" checked={isPauseFronted()}
                                onClick={(e) => OnTimerIconClicked(e.currentTarget, !isPauseFronted())} />
                         <AiOutlinePauseCircle class="swap-off fill-current" size={48} />

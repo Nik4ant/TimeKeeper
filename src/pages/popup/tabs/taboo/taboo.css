@@ -16,7 +16,5 @@
 
 .taboo-website-container {
     @apply alert shadow-md flex flex-row items-center border border-accent;
-}
-.taboo-website-container:hover {
-    @apply border-accent-focus;
+    border-radius: calc(var(--rounded-btn) * 0.5);
 }

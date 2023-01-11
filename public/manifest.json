@@ -12,6 +12,9 @@
         "alarms",
         "notifications"
     ],
+    "icons": {
+        "128": "extension_icon.png"
+    },
     "action": {
         "default_popup": "popup/popup.html"
     }

@@ -41,11 +41,11 @@ function TabooForm() {
     return <>
         <div class="form-control text-base font-medium">
             <label class="label">
-                <span class="label-text text-lg font-medium">Enter taboo domain:</span>
+                <span class="label-text text-xl font-medium">Enter taboo domain:</span>
             </label>
             <label class="input-group url-input-container" >
                 <span class="bg-opacity-0 url-input-tag"
-                      classList={{"!border-error !focus:border-error": currentError().length !== 0}}>https:///</span>
+                      classList={{"!border-error !focus:border-error": currentError().length !== 0}}>https://</span>
                 {tabooInputElement}
             </label>
             <Show when={currentError().length !== 0}>
@@ -72,16 +72,16 @@ function TabooWebsite(props) {
             });
     }
 
-    const deleteIcon = (<RiSystemDeleteBin2Line size={24} class={"text-error"}
+    const deleteIcon = (<RiSystemDeleteBin2Line size={26} class="text-error ml-auto mr-2"
                                                 onClick={_ => removeTaboo(props.website)} /> as HTMLOrSVGImageElement);
     const tabooWebsite = (<span class="font-medium text-base">{props.website}</span> as HTMLSpanElement);
     // Special hover effect (taboo website is crossed when delete icon is hovered
-    const HOVER_EFFECT_CLASSES = ["line-through", "decoration-error", "decoration-4"];
+    const HOVER_EFFECT_CLASSES = ["line-through", "decoration-error/80", "decoration-4"];
     deleteIcon.addEventListener("mouseover", (_) => tabooWebsite.classList.add(...HOVER_EFFECT_CLASSES));
     deleteIcon.addEventListener("mouseout", (_) => tabooWebsite.classList.remove(...HOVER_EFFECT_CLASSES));
 
     return <>
-        <div class="taboo-website-container m-2 p-2.5">
+        <div class="taboo-website-container m-2 p-2">
             {tabooWebsite}
             {deleteIcon}
         </div>
@@ -97,7 +97,7 @@ export default function TabooRoot() {
     });
 
     return <>
-        <div>
+        <div class="flex flex-col space-y-3">
             <TabooForm />
             <div class="grid grid-cols-2 gap-x-4">
                 <For each={storageTabooGetter()}>{(tabooWebsite, _) =>
