@@ -54,11 +54,11 @@ export class Maybe<E extends ErrorType | undefined> {
 // Function for printing error messages that never suppose to occur
 export function Unreachable(message?: string): void {
     if (message === undefined) {
-        console.error("Unpredictable error occurred with no error message. Contact developer if possible");
+        console.debug("Unpredictable error occurred with no error message. Contact developer if possible");
         alert("Unpredictable error occurred with no error message. Contact developer if possible");
     }
     else {
-        console.error(`Unpredictable error occurred: "${message}".\n Contact developer if possible`);
+        console.debug(`Unpredictable error occurred: "${message}".\n Contact developer if possible`);
         alert(`Unpredictable error occurred: "${message}".\n Contact developer if possible`);
     }
 }

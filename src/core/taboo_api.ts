@@ -46,7 +46,7 @@ export namespace Taboo {
 
         export class Remove extends MessageType {
             // Note: Again fighting with the fact the interface can't have static values
-            static readonly NAME;
+            static readonly NAME = "TabooMessageRemove";
             messageName: string;
             toReceiver: string;
 

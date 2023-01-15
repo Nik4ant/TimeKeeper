@@ -1,20 +1,6 @@
 @import "../../../common/style.css";
 
-.url-input {
-    @apply input input-ghost text-xl;
-}
-.url-input-container .url-input-tag,
-.url-input-container .url-input {
-    @apply border-t-0 border-l-0 border-r-0 border-b-4 border-primary;
-    /* Used to make border color change instant on both url-input-tag and url-input */
-    transition: none;
-}
-.url-input-container:focus-within .url-input-tag,
-.url-input-container:focus-within .url-input {
-    @apply outline-none border-primary-focus;
-}
-
 .taboo-website-container {
-    @apply alert shadow-md flex flex-row items-center border border-accent;
+    @apply text-base-content shadow-md flex flex-row items-center border border-accent;
     border-radius: calc(var(--rounded-btn) * 0.5);
 }

@@ -33,7 +33,10 @@ export function SetTheme(theme: string): Maybe<ThemeNotExist> {
         return Maybe.Err(new ThemeNotExist(theme));
     }
     // Update theme
-    document.getElementsByTagName("html")[0].setAttribute("data-theme", theme);
+    const htmlElement = document.getElementsByTagName("html")[0];
+    htmlElement.setAttribute("data-theme", theme);
+    htmlElement.setAttribute("data-set-theme", theme);
+
     setCurrentTheme(theme);
     return Maybe.Ok();
 }

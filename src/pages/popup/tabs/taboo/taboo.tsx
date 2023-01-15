@@ -31,7 +31,7 @@ function TabooForm() {
             });
     }
 
-    const tabooInputElement = (<input class="url-input w-1/2 p-1.5" type="text" placeholder="example.com"
+    const tabooInputElement = (<input class="input-underline w-1/2 p-1.5" type="text" placeholder="example.com"
                                       name="tabooInputElement" maxLength={Taboo.MAX_LENGTH}
                                       classList={{"!border-error !focus:border-error": currentError().length !== 0}} />) as HTMLInputElement;
     tabooInputElement.addEventListener("keyup", (e) => {
@@ -43,8 +43,8 @@ function TabooForm() {
             <label class="label">
                 <span class="label-text text-xl font-medium">Enter taboo domain:</span>
             </label>
-            <label class="input-group url-input-container" >
-                <span class="bg-opacity-0 url-input-tag"
+            <label class="input-group input-group-md input-group-underline" >
+                <span class="bg-opacity-0 input-tag-underline text-lg"
                       classList={{"!border-error !focus:border-error": currentError().length !== 0}}>https://</span>
                 {tabooInputElement}
             </label>
@@ -81,7 +81,7 @@ function TabooWebsite(props) {
     deleteIcon.addEventListener("mouseout", (_) => tabooWebsite.classList.remove(...HOVER_EFFECT_CLASSES));
 
     return <>
-        <div class="taboo-website-container m-2 p-2">
+        <div class="taboo-website-container m-2 p-3">
             {tabooWebsite}
             {deleteIcon}
         </div>
@@ -89,7 +89,7 @@ function TabooWebsite(props) {
 }
 
 export default function TabooRoot() {
-    // Connecting to existing storage signal to dynamically change frontend content.
+    // Connecting to existing storage signal to dynamically update taboo websites list
     var [storageTabooGetter, __storageTabooSetter] = createSignal<string[]>([]);
     connectToStorageSignalAsync<string[]>(TABOO_STORAGE_NAME).then((storageGetter) => {
         storageTabooGetter = storageGetter;

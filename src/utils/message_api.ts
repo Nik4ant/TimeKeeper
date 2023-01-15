@@ -1,5 +1,5 @@
 import {createSignal} from "solid-js";
-import {ErrorType, Maybe, Result} from "./custom_error";
+import {ErrorType, Maybe, Result, Unreachable} from "./custom_error";
 
 // Base type for messages
 export abstract class MessageType {
@@ -86,7 +86,7 @@ export namespace MessageUtil {
             sendResponse(Result.Err(new MessageReceiverNotExist(message.toReceiver)));
         }
         else {
-            console.log(message.toReceiver, message.messageName, message.isAsync);
+            console.debug(`${message.toReceiver}; ${message.messageName}; isAsync: ${message.isAsync}`);
             if (message.isAsync) {
                 // If function is async with need to wait for its result first
                 messageReceiver.onMessageReceived(message).then((response) => {
@@ -115,18 +115,34 @@ export namespace MessageUtil {
     }
 }
 
+// Sends given message to the background page. T is expected response type (void by default)
 export async function SendChromeMessage<T = void>(message: MessageType): Promise<Result<T, UnexpectedChromeRuntimeError | MessageReceiverNotExist>> {
-    // FIXME: Uncaught (in promise) Error: Could not establish connection. Receiving end does not exist.
-    // TODO: add try catch because at this point I have no idea what is causing the issue sometimes
-    // Send chrome message
-    const response: Result<T, MessageReceiverNotExist> = await chrome.runtime.sendMessage(message);
-    // Check for errors from chrome and messaging system
-    if (chrome.runtime.lastError !== undefined) {
-        return Result.Err(new UnexpectedChromeRuntimeError(`Try again! Chrome error: "${chrome.runtime.lastError.message}"`));
-    }
-    if (!response.isOk) {
-        return Result.Err(response.error);
-    }
+    // Note: Sometimes near randomly an error appears "receiving end doesn't exist".
+    // I'm not sure what was (is?) causing, so instead of immediately scaring user with an error message
+    // code below will try again and only then report an error. Keep an eye on this thing!
+    var tryAgain: boolean = true;
+    while (true) {
+        try {
+            // Send chrome message
+            const response: Result<T, MessageReceiverNotExist> = await chrome.runtime.sendMessage(message);
+            // Check for errors from chrome and messaging system
+            if (chrome.runtime.lastError !== undefined) {
+                return Result.Err(new UnexpectedChromeRuntimeError(`Try again! Chrome error: "${chrome.runtime.lastError.message}"`));
+            }
+            if (!response.isOk) {
+                return Result.Err(response.error);
+            }
 
-    return Result.Ok(response.value);
+            return Result.Ok(response.value);
+        } catch (e) {
+            // Try again before throwing an error
+            if (tryAgain) {
+                console.debug(`Error occurred in messaging system: "${e}"`);
+                console.debug("Trying again");
+                tryAgain = false;
+                continue;
+            }
+            return Result.Err(new UnexpectedChromeRuntimeError(`Messaging system try catch block: "${e}"`));
+        }
+    }
 }
