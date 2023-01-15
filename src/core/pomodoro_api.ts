@@ -15,6 +15,21 @@ In order to make timer with 1 second precession following trick was used...
 When user creates a timer alarm is set
 */
 
+//region
+export type PomodoroInfo = {
+    workSessionDurationMs: number,
+    breakDurationMs: number,
+    // True if last active timer was used as a timer for work session
+    isWorkingSession: boolean,
+}
+const DEFAULT_POMODORO_INFO: PomodoroInfo = {
+    workSessionDurationMs: 45 * 60 * 1000,
+    breakDurationMs: 15 * 60 * 1000,
+    isWorkingSession: true,
+}
+export const POMODORO_INFO_STORAGE_NAME = "TimeKeeperPomodoroInfo";
+const [pomodoroInfoStorage, setPomodoroInfoStorage] = await createStorageSignalAsync<PomodoroInfo>(POMODORO_INFO_STORAGE_NAME, DEFAULT_POMODORO_INFO);
+//endregion
 //region Timer info
 type TimerInfo = {
     isPaused: boolean,
@@ -25,32 +40,15 @@ type TimerInfo = {
 }
 const DEFAULT_TIMER_INFO: TimerInfo = {
     isPaused: true,
-    durationMs: 0,
-    timeLeftMs: 0,
+    durationMs: DEFAULT_POMODORO_INFO.workSessionDurationMs,
+    timeLeftMs: DEFAULT_POMODORO_INFO.workSessionDurationMs,
     startTimeDate: 0,
     lastPauseDate: 0,
 }
 
-export const TIMER_INFO_STORAGE_NAME = "TimeKeeperPomodoroTimer";
+const TIMER_INFO_STORAGE_NAME = "TimeKeeperPomodoroTimer";
 const [timerInfoStorage, setTimerInfoStorage] = await createStorageSignalAsync<TimerInfo>(TIMER_INFO_STORAGE_NAME, DEFAULT_TIMER_INFO);
 // endregion
-//region PomodoroInfo
-type PomodoroInfo = {
-    workingSessionDurationMs: number,
-    breakDurationMs: number,
-    longBreakDurationMs: number,
-    // True if last active timer was used as a timer for work session
-    isWorkingSession: boolean,
-}
-const DEFAULT_POMODORO_INFO: PomodoroInfo = {
-    workingSessionDurationMs: 45,
-    breakDurationMs: 15,
-    longBreakDurationMs: 25,
-    isWorkingSession: true,  // TODO: display current state with smth like a switch below timer
-}
-const POMODORO_INFO_STORAGE_NAME = "TimeKeeperPomodoroInfo";
-const [pomodoroInfoStorage, setPomodoroInfoStorage] = await createStorageSignalAsync<PomodoroInfo>(POMODORO_INFO_STORAGE_NAME, DEFAULT_POMODORO_INFO);
-//endregion
 
 export namespace Pomodoro {
     class UnpauseRunningTimerError implements ErrorType {
@@ -133,41 +131,25 @@ export namespace Pomodoro {
             messageName: string;
             toReceiver: string;
 
-            newInfo: PomodoroInfo;
-            constructor(workingSessionDurationMs: number, breakDurationMs: number, longBreakDurationMs: number,
-                        isWorkingSession?: boolean) {
+            workSessionDurationMs: number;
+            breakDurationMs: number;
+            isWorkingSession: boolean;
+            constructor(workingSessionDurationMs: number, breakDurationMs: number, isWorkingSession?: boolean) {
                 super(Api.MESSAGE_RECEIVER_NAME);
                 this.messageName = SetInfo.NAME;
-
-                this.newInfo = {
-                    workingSessionDurationMs: workingSessionDurationMs,
-                    breakDurationMs: breakDurationMs,
-                    longBreakDurationMs: longBreakDurationMs,
-                    // If isWorkingSession parameter wasn't specified using value from storage
-                    isWorkingSession: isWorkingSession === undefined ? pomodoroInfoStorage().isWorkingSession : isWorkingSession
-                }
+                this.workSessionDurationMs = workingSessionDurationMs;
+                this.breakDurationMs = breakDurationMs;
+                // If isWorkingSession parameter wasn't specified using value from storage
+                this.isWorkingSession = isWorkingSession === undefined ? pomodoroInfoStorage().isWorkingSession : isWorkingSession;
             }
         }
-
-        export class GetInfo extends MessageType {
-            // Note: Again fighting with the fact the interface can't have static values
-            static readonly NAME = "PomodoroMessageGetInfo";
-            messageName: string;
-            toReceiver: string;
-
-            constructor() {
-                super(Api.MESSAGE_RECEIVER_NAME);
-                this.messageName = GetInfo.NAME;
-            }
-        }
-        export type GetInfoResponse = PomodoroInfo;
     }
     // Api that handles new messages and contains pomodoro api logic
     export class Api extends MessageBasedApi {
         public static override readonly MESSAGE_RECEIVER_NAME = "PomodoroApiReceiver";
         private static readonly POMODORO_CHROME_ALARM_NAME = "TimeKeeperPomodoroAlarm";
 
-        static override OnNewMessageReceived(message): Message.PauseResponse | Message.UnpauseResponse | Message.GetTimerResponse | Message.GetInfoResponse | void {
+        static override OnNewMessageReceived(message): Message.PauseResponse | Message.UnpauseResponse | Message.GetTimerResponse | void {
             switch (message.messageName) {
                 case Message.Pause.NAME:
                     return Api.Pause();
@@ -178,9 +160,8 @@ export namespace Pomodoro {
                 case Message.GetTimer.NAME:
                     return Api.GetLatestTimer();
                 case Message.SetInfo.NAME:
-                    return Api.SetInfo((message as Message.SetInfo).newInfo);
-                case Message.GetInfo.NAME:
-                    return Api.GetInfo();
+                    const infoMessage = message as Message.SetInfo;
+                    return Api.SetInfo(infoMessage.workSessionDurationMs, infoMessage.breakDurationMs, infoMessage.isWorkingSession);
                 default:
                     console.error(`Unpredictable error! Unexpected message "${message}" to receiver "${Api.MESSAGE_RECEIVER_NAME}"`);
             }
@@ -194,20 +175,30 @@ export namespace Pomodoro {
         private static OnChromeAlarm(alarm: chrome.alarms.Alarm): void {
             // Check if alarm is related to pomodoro
             if (alarm.name === Api.POMODORO_CHROME_ALARM_NAME) {
-                // Step 1. Reset timer
-                setTimerInfoStorage(DEFAULT_TIMER_INFO);
-                // "Alarm"
-                console.log("ALARM ENDED! BIP-BOP; BIP-BOP...");
+                // Step 1. Update pomodoro info session status
+                var pomodoroInfo = pomodoroInfoStorage();
+                pomodoroInfo.isWorkingSession = !pomodoroInfo.isWorkingSession;
+                setPomodoroInfoStorage(pomodoroInfo);
+                // Step 2. Reset timer according to new mode work/rest
+                var timerInfo = DEFAULT_TIMER_INFO;
+                if (pomodoroInfo.isWorkingSession) {
+                    timerInfo.timeLeftMs = pomodoroInfo.workSessionDurationMs;
+                    timerInfo.durationMs = pomodoroInfo.workSessionDurationMs;
+                } else {
+                    timerInfo.timeLeftMs = pomodoroInfo.breakDurationMs;
+                    timerInfo.durationMs = pomodoroInfo.breakDurationMs;
+                }
+                setTimerInfoStorage(timerInfo);
 
-                // Step 2. Send notification
+                // Step 3. Send notification
+                console.log("ALARM! BIP-BOP; BIP-BOP...");
                 var notificationMessage: string;
                 var notificationIconUrl: string;
                 if (pomodoroInfoStorage().isWorkingSession) {
-                    // TODO: Icon for rest notification
                     notificationIconUrl = chrome.runtime.getURL("work_notification_icon.png");
                     notificationMessage = "Timer! End of working session. You can rest now..."
                 } else {
-                    notificationIconUrl = chrome.runtime.getURL("work_notification_icon.png");
+                    notificationIconUrl = chrome.runtime.getURL("rest_notification_icon.png");
                     notificationMessage = "Timer! End of rest time. Good luck and get some work done!"
                 }
                 chrome.notifications.create({
@@ -217,10 +208,6 @@ export namespace Pomodoro {
                     message: notificationMessage,
                     priority: 2
                 });
-                // Step 3. Update pomodoro info session status
-                var pomodoroInfo = pomodoroInfoStorage();
-                pomodoroInfo.isWorkingSession = !pomodoroInfo.isWorkingSession;
-                setPomodoroInfoStorage(pomodoroInfo);
             }
         }
 
@@ -307,12 +294,18 @@ export namespace Pomodoro {
             return Maybe.Ok();
         }
 
-        // Note: Separate get and set methods exist only to avoid having API related logic
-        // inside messages handler. Otherwise, that would be useless
-        private static GetInfo(): PomodoroInfo {
-            return pomodoroInfoStorage();
+        // Note: This is used ONLY for background page. Under any circumstances DON'T use this anywhere else
+        static _IsWorkingSession() {
+            return pomodoroInfoStorage().isWorkingSession;
         }
-        private static SetInfo(newInfo: PomodoroInfo): void {
+
+        private static SetInfo(workingSessionDurationMs: number, breakDurationMs: number, isWorkingSession: boolean): void {
+            // TODO: add validation later? (probably not because time is validated by browser)
+            const newInfo: PomodoroInfo = {
+                workSessionDurationMs: workingSessionDurationMs,
+                breakDurationMs: breakDurationMs,
+                isWorkingSession: isWorkingSession
+            };
             setPomodoroInfoStorage(newInfo);
         }
     }

@@ -1,18 +1,22 @@
-import {createSignal, Accessor, Setter, Component, Show} from "solid-js";
+import {createSignal, Accessor, Setter, Component, Show, lazy} from "solid-js";
 import {AiOutlinePauseCircle, AiOutlinePlayCircle} from 'solid-icons/ai';
 import "./pomodoro.css";
-import {Pomodoro} from "../../../../core/pomodoro_api";
+import {Pomodoro, POMODORO_INFO_STORAGE_NAME, PomodoroInfo} from "../../../../core/pomodoro_api";
 import {Unreachable} from "../../../../utils/custom_error";
 import {SendChromeMessage} from "../../../../utils/message_api";
+import {FaSolidBusinessTime} from "solid-icons/fa";
+import {FaSolidUserClock} from 'solid-icons/fa'
+import {connectToStorageSignalAsync} from "../../../../utils/storage_manager";
 
 
 // Note: Having separate interface feels dumb, but there is no better way to specify type
-interface TimerEditableDisplayProps {
+interface EditableTimerDisplayProps {
     isPauseFronted: Accessor<boolean>,
     timerValueMs: Accessor<number>,
     setTimerValueMs: Setter<number>
 }
-const TimerEditableDisplay: Component<TimerEditableDisplayProps> = ({isPauseFronted, timerValueMs, setTimerValueMs}) => {
+// Displays time in hh:mm:ss format that can be editable
+const EditableTimerDisplay: Component<EditableTimerDisplayProps> = ({isPauseFronted, timerValueMs, setTimerValueMs}) => {
     function OnTimeInputValueChanged(newValueInMs: number) {
         // Validation is done by input field except the case when value is: "--:--:--"
         // so extra check for NaN is required
@@ -46,7 +50,8 @@ const TimerEditableDisplay: Component<TimerEditableDisplayProps> = ({isPauseFron
         </div>
     </>
 }
-
+// Timer component that renders and handles most of the logic for pomodoro timer
+// TODO: add reset button
 function Timer() {
     // Interval is used to update only fronted timer
     // (During initial load there is no timer)
@@ -73,13 +78,12 @@ function Timer() {
             setIsPauseFrontend(!value);
             return;
         }
-
         setIsPauseFrontend(value);
         // Play/start icon was pressed
         if (!value) {
             // Step 1. Check if this is a new timer (not an ongoing one)
             // Note: This is also works if timer was paused and its values were overwritten
-            if (initialTimerDurationMs() < timerValueMs()) {
+            if (initialTimerDurationMs() !== timerValueMs()) {
                 // Step 2.1 if it is, create a timer
                 setInitialTimerDurationMs(timerValueMs());
                 SendChromeMessage(new Pomodoro.Message.CreateTimer(timerValueMs()))
@@ -167,7 +171,7 @@ function Timer() {
         <div class="radial-progress text-primary z-0" style={{"--value": timeLeftInPercentage(),
             "--thickness": "4px", "--size": "14rem"}}>
             <div class="flex flex-col justify-center">
-                <TimerEditableDisplay isPauseFronted={isPauseFronted} timerValueMs={timerValueMs} setTimerValueMs={setTimerValueMs} />
+                <EditableTimerDisplay isPauseFronted={isPauseFronted} timerValueMs={timerValueMs} setTimerValueMs={setTimerValueMs} />
                 <div class="absolute bottom-5 left-1/2 right-1/2 flex justify-center">
                     <label class="h-1/2 swap swap-rotate text-secondary hover:text-secondary-focus">
                         <input type="checkbox" checked={isPauseFronted()}
@@ -180,17 +184,83 @@ function Timer() {
         </div>
     </>
 }
-
+// Mini form for changing pomodoro info
 function PomodoroForm() {
+    // TODO: use solid-js built-in lazy?
+    // Connecting to existing storage signal to sync with pomodoro info on the backend
+    var [pomodoroInfo, __pomodoroInfoSetter] = createSignal<PomodoroInfo>();
+    connectToStorageSignalAsync<PomodoroInfo>(POMODORO_INFO_STORAGE_NAME).then((storageGetter) => {
+        pomodoroInfo = storageGetter;
+        __pomodoroInfoSetter(storageGetter());
+        // Updating derived signals
+        workSessionMs = () => pomodoroInfo().workSessionDurationMs;
+        workSessionDurationInput.valueAsNumber = workSessionMs();
+    });
+    // region Work session input
+    // Signal for value in work session time
+    var [workSessionMs, __setWorkSessionMs] = createSignal(0);
+    // TODO: continue. step thing doesn't work. Signals stuff looks weird
+    const workSessionDurationInput = <input class="time-input z-10" step="3600" type="time" /> as HTMLInputElement;
+    // endregion
+
     return <>
-        <h1 class="text-lg">Yet to be implemented</h1>
+        <div class="flex flex-col space-y-2.5">
+            <h1 class="text-3xl font-medium">Pomodoro details</h1>
+            <div class="form-control text-base font-medium">
+                <label class="label">
+                    <span class="label-text text-lg font-medium">Work session in hh:mm</span>
+                </label>
+                <label class="input-group input-group-md" >
+                    {workSessionDurationInput}
+                </label>
+            </div>
+        </div>
+    </>
+}
+// Switch like indicator displaying current pomodoro state: work/rest
+function PomodoroIndicator() {
+    // Connecting to existing storage signal to sync with pomodoro info in the background
+    var [storagePomodoroInfo, __setPomodoroInfo] = createSignal<PomodoroInfo>({
+        // Will be overwritten later with the actual values from storage
+        isWorkingSession: true,
+        workSessionDurationMs: 0,
+        breakDurationMs: 0,
+    });
+    connectToStorageSignalAsync<PomodoroInfo>(POMODORO_INFO_STORAGE_NAME).then((storageGetter) => {
+        storagePomodoroInfo = storageGetter;
+        __setPomodoroInfo(storageGetter());
+    });
+
+    return <>
+        <div class="self-center flex flex-row space-x-4 justify-center">
+            <h2 class="font-medium text-2xl self-center align-middle">State:</h2>
+            <label class="swap swap-flip cursor-default">
+                <input type="checkbox" checked={storagePomodoroInfo().isWorkingSession} disabled />
+
+                <div class="swap-on">
+                    <div class="flex flex-col justify-center">
+                        <FaSolidBusinessTime size={48} class="text-secondary" />
+                        <span class="text-base-content text-lg">Work</span>
+                    </div>
+                </div>
+                <div class="swap-off">
+                    <div class="flex flex-col justify-center">
+                        <FaSolidUserClock size={48} class="text-secondary" />
+                        <span class="text-base-content text-lg">Rest</span>
+                    </div>
+                </div>
+            </label>
+        </div>
     </>
 }
 
 export default function PomodoroRoot() {
     return <>
-        <div class="flex justify-center p-2">
-            <Timer />
+        <div class="flex justify-around p-2">
+            <div class="flex flex-col space-y-5 justify-center">
+                <Timer />
+                <PomodoroIndicator />
+            </div>
             <PomodoroForm />
         </div>
     </>
