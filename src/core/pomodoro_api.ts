@@ -31,7 +31,7 @@ export const POMODORO_INFO_STORAGE_NAME = "TimeKeeperPomodoroInfo";
 const [pomodoroInfoStorage, setPomodoroInfoStorage] = await createStorageSignalAsync<PomodoroInfo>(POMODORO_INFO_STORAGE_NAME, DEFAULT_POMODORO_INFO);
 //endregion
 //region Timer info
-type TimerInfo = {
+export type TimerInfo = {
     isPaused: boolean,
     durationMs: number,
     timeLeftMs: number,
@@ -175,32 +175,27 @@ export namespace Pomodoro {
         private static OnChromeAlarm(alarm: chrome.alarms.Alarm): void {
             // Check if alarm is related to pomodoro
             if (alarm.name === Api.POMODORO_CHROME_ALARM_NAME) {
+                var notificationMessage: string;
+                var notificationIconUrl: string;
                 // Step 1. Update pomodoro info session status
                 var pomodoroInfo = pomodoroInfoStorage();
                 pomodoroInfo.isWorkingSession = !pomodoroInfo.isWorkingSession;
                 setPomodoroInfoStorage(pomodoroInfo);
-                // Step 2. Reset timer according to new mode work/rest
+                // Step 2. Reset timer according to new mode work/rest + select mode specific notification
                 var timerInfo = DEFAULT_TIMER_INFO;
                 if (pomodoroInfo.isWorkingSession) {
                     timerInfo.timeLeftMs = pomodoroInfo.workSessionDurationMs;
                     timerInfo.durationMs = pomodoroInfo.workSessionDurationMs;
+                    notificationIconUrl = chrome.runtime.getURL("rest_notification_icon.png");
+                    notificationMessage = "Timer! End of rest time. Good luck and get some work done!"
                 } else {
                     timerInfo.timeLeftMs = pomodoroInfo.breakDurationMs;
                     timerInfo.durationMs = pomodoroInfo.breakDurationMs;
-                }
-                setTimerInfoStorage(timerInfo);
-
-                // Step 3. Send notification
-                console.log("ALARM! BIP-BOP; BIP-BOP...");
-                var notificationMessage: string;
-                var notificationIconUrl: string;
-                if (pomodoroInfoStorage().isWorkingSession) {
                     notificationIconUrl = chrome.runtime.getURL("work_notification_icon.png");
                     notificationMessage = "Timer! End of working session. You can rest now..."
-                } else {
-                    notificationIconUrl = chrome.runtime.getURL("rest_notification_icon.png");
-                    notificationMessage = "Timer! End of rest time. Good luck and get some work done!"
                 }
+                setTimerInfoStorage(timerInfo);
+                // Step 3. Send notification
                 chrome.notifications.create({
                     type: "basic",
                     iconUrl: notificationIconUrl,

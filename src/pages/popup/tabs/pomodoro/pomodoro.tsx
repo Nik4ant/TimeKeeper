@@ -1,13 +1,25 @@
 import {createSignal, Accessor, Setter, Component, Show, lazy} from "solid-js";
 import {AiOutlinePauseCircle, AiOutlinePlayCircle} from 'solid-icons/ai';
 import "./pomodoro.css";
-import {Pomodoro, POMODORO_INFO_STORAGE_NAME, PomodoroInfo} from "../../../../core/pomodoro_api";
+import {Pomodoro, POMODORO_INFO_STORAGE_NAME, PomodoroInfo, TimerInfo} from "../../../../core/pomodoro_api";
 import {Unreachable} from "../../../../utils/custom_error";
 import {SendChromeMessage} from "../../../../utils/message_api";
 import {FaSolidBusinessTime} from "solid-icons/fa";
 import {FaSolidUserClock} from 'solid-icons/fa'
 import {connectToStorageSignalAsync} from "../../../../utils/storage_manager";
 
+
+// Returns timer info from the background or undefined if error occurred in the process
+// (Note: Error is not returned because it's handled in the process)
+async function GetBackgroundTimerInfo(): Promise<TimerInfo | undefined> {
+    var response = await SendChromeMessage<Pomodoro.Message.GetTimerResponse>(new Pomodoro.Message.GetTimer())
+    // Handling possible error from the messaging system
+    if (!response.isOk) {
+        Unreachable(response.error.message);
+        return;
+    }
+    return await Promise.resolve(response.value);
+}
 
 // Note: Having separate interface feels dumb, but there is no better way to specify type
 interface EditableTimerDisplayProps {
@@ -54,7 +66,6 @@ const EditableTimerDisplay: Component<EditableTimerDisplayProps> = ({isPauseFron
 // TODO: add reset button
 function Timer() {
     // Interval is used to update only fronted timer
-    // (During initial load there is no timer)
     let timerTickInterval: NodeJS.Timer;
     // region Timer signals
     const [timerValueMs, setTimerValueMs] = createSignal(0);
@@ -139,33 +150,45 @@ function Timer() {
             clearInterval(timerTickInterval);
             setTimerValueMs(0);
             setIsPauseFrontend(true);
+            /*
+            Note: This approach is bad because if fronted code executes earlier than background code than
+            frontend timer values won't be in sync with background (real) timer values.
+            At the same time it's good enough because the likelihood of this being an issue is very low for two reasons:
+            1) Popup page won't be open 24/7, which means that when timer runs out
+            the odds of user being on the popup page during that time are very low.
+            2) Even if situation from 1 occurs the chances of desync happening are low, HOWEVER
+            even if desync occurs this is not critical because user can just reopen popup page (or pomodoro tab)
+            and everything will be fine
+            */
+            // Updating values after timer runs out (ON THE FRONTEND PART!)
+            GetBackgroundTimerInfo().then((timerInfo) => {
+                if (timerInfo === undefined) {
+                    return;
+                }
+                setTimerValueMs(timerInfo.timeLeftMs);
+                setInitialTimerDurationMs(timerInfo.durationMs);
+            });
             return;
         }
         setTimerValueMs(newMsValue);
     }
 
     // Loading the latest timer info
-    SendChromeMessage<Pomodoro.Message.GetTimerResponse>(new Pomodoro.Message.GetTimer())
-        .then((response) => {
-            // Handling possible error from the messaging system
-            if (!response.isOk) {
-                Unreachable(response.error.message);
-                return;
-            }
-            // Response value is a promise, so need to wait for result as well
-            Promise.resolve(response.value)
-                .then((timerInfo) => {
-                    // 1) Set values for visual elements
-                    setIsPauseFrontend(timerInfo.isPaused);
-                    setTimerValueMs(timerInfo.timeLeftMs);
-                    // 2) If there is ongoing timer in the background starting interval immediately
-                    if (!timerInfo.isPaused)
-                        timerTickInterval = setInterval(OneSecondTick, 1000);
-                    // 3) Since signal value can't be 0 extra check is necessary
-                    if (timerInfo.durationMs !== 0)
-                        setInitialTimerDurationMs(timerInfo.durationMs);
-                });
-        });
+    GetBackgroundTimerInfo().then((timerInfo) => {
+        // Skip if error occurred
+        if (timerInfo === undefined) {
+            return;
+        }
+        // 1) Set values for visual elements
+        setIsPauseFrontend(timerInfo.isPaused);
+        setTimerValueMs(timerInfo.timeLeftMs);
+        // 2) If there is ongoing timer in the background starting interval immediately
+        if (!timerInfo.isPaused)
+            timerTickInterval = setInterval(OneSecondTick, 1000);
+        // 3) Since signal value can't be 0 extra check is necessary
+        if (timerInfo.durationMs !== 0)
+            setInitialTimerDurationMs(timerInfo.durationMs);
+    });
 
     return <>
         <div class="radial-progress text-primary z-0" style={{"--value": timeLeftInPercentage(),

@@ -16,3 +16,17 @@
     background-size: 200%;
     animation: gradient-scrolling 5s ease-in-out infinite;
 }
+
+.input-underline {
+    @apply input input-ghost text-xl;
+}
+.input-group-underline .input-tag-underline,
+.input-group-underline .input-underline {
+    @apply border-t-0 border-l-0 border-r-0 border-b-4 border-primary;
+    /* Used to make border color change instantly */
+    transition: none;
+}
+.input-group-underline:focus-within .input-underline,
+.input-group-underline:focus-within .input-tag-underline {
+    @apply outline-none border-primary-focus
+}
