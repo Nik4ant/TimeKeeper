@@ -170,6 +170,27 @@ export namespace Pomodoro {
         public static override _InitForBackground() {
             super._InitForBackground();  // base class init for messaging system
             chrome.alarms.onAlarm.addListener(Api.OnChromeAlarm);
+            // If there is a no active alarm and value from storage indicate that there is a running timer
+            // most likely it means that browser was closed before timer ran out. To avoid having issues with UI
+            // timer values are reset according to the pomodoro info
+            chrome.alarms.get(Api.POMODORO_CHROME_ALARM_NAME).then((alarm) => {
+                if (alarm === undefined && !timerInfoStorage().isPaused) {
+                    console.debug("During last session browser was closed before timer ran out, so timer info was reset");
+                    var newTimerInfo = timerInfoStorage();
+                    newTimerInfo.isPaused = true;
+                    newTimerInfo.startTimeDate = 0;
+                    newTimerInfo.lastPauseDate = 0;
+
+                    if (pomodoroInfoStorage().isWorkingSession) {
+                        newTimerInfo.durationMs = pomodoroInfoStorage().workSessionDurationMs;
+                        newTimerInfo.timeLeftMs = pomodoroInfoStorage().workSessionDurationMs;
+                    } else {
+                        newTimerInfo.durationMs = pomodoroInfoStorage().breakDurationMs;
+                        newTimerInfo.timeLeftMs = pomodoroInfoStorage().breakDurationMs;
+                    }
+                    setTimerInfoStorage(newTimerInfo);
+                }
+            });
         }
 
         private static OnChromeAlarm(alarm: chrome.alarms.Alarm): void {
@@ -294,8 +315,9 @@ export namespace Pomodoro {
             return pomodoroInfoStorage().isWorkingSession;
         }
 
+        // Note: No validation (yet) because it's handled on the frontend via html input tag.
+        // Would be good to have it here as well, but nah...whatever...
         private static SetInfo(workingSessionDurationMs: number, breakDurationMs: number, isWorkingSession: boolean): void {
-            // TODO: add validation later? (probably not because time is validated by browser)
             const newInfo: PomodoroInfo = {
                 workSessionDurationMs: workingSessionDurationMs,
                 breakDurationMs: breakDurationMs,

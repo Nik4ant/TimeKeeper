@@ -1,4 +1,4 @@
-import {createSignal, Accessor, Setter, Component, Show, lazy} from "solid-js";
+import {createSignal, Accessor, Setter, Component, Show} from "solid-js";
 import {AiOutlinePauseCircle, AiOutlinePlayCircle} from 'solid-icons/ai';
 import "./pomodoro.css";
 import {Pomodoro, POMODORO_INFO_STORAGE_NAME, PomodoroInfo, TimerInfo} from "../../../../core/pomodoro_api";
@@ -21,6 +21,60 @@ async function GetBackgroundTimerInfo(): Promise<TimerInfo | undefined> {
     return await Promise.resolve(response.value);
 }
 
+interface TimeInputProps {
+    totalTimeMs: Accessor<number>;
+    setTotalTimeMs: Setter<number>;
+    currentError?: Accessor<string>;
+}
+const TimeInput: Component<TimeInputProps> = ({totalTimeMs, setTotalTimeMs, currentError}) => {
+    const ValidateNumber = (event: InputEvent & {currentTarget: HTMLInputElement, target: Element},
+                            max: number, min: number = 0): number => {
+        const sender: HTMLInputElement = event.currentTarget;
+        console.debug(sender.value, sender.valueAsNumber);
+        // Validating length because setting attribute maxLength does nothing for some reason...
+        sender.value = sender.value
+            .replace(/[^0-9.]/g, '')
+            .replace(/(\..*?)\..*/g, '$1');
+
+        const parsedValue = Number.parseInt(sender.value);
+        // Validating number range
+        const result = parsedValue <= max && parsedValue >= min ? parsedValue : min;
+        sender.valueAsNumber = result;
+        sender.value = result.toString();
+
+        return result;
+    };
+
+    const totalTimeSeconds = () => totalTimeMs() / 1000;
+    const currentSeconds = () => Math.floor(totalTimeSeconds()) % 60;
+    const currentMinutes = () => Math.floor(totalTimeSeconds() / 60) % 60;
+    const currentHours = () => Math.floor(totalTimeSeconds() / 3600);
+    // Note: Just don't question...weird classList is used to keep input size based on value length.
+    // This can definitely be improved, but it works for now.
+    return <>
+        <div class="flex flex-col z-10">
+            <div class="flex flex-row space-x-0">
+                <input type="number" value={currentHours()} classList={{"w-[1.3rem]": currentHours().toString().length <= 1, "w-[2.55rem]": currentHours().toString().length === 2}}
+                       class="number-input !rounded-none leading-1 !pl-0 !pr-0" maxLength="2"
+                       onInput={e => setTotalTimeMs(currentSeconds() * 1000 + currentMinutes() * 1000 * 60 + 1000 * 3600 * ValidateNumber(e, 24))} />
+                <span class="bg-opacity-0 time-hint-tag">h</span>
+
+                <input type="number" value={currentMinutes()} classList={{"w-[1.3rem]": currentMinutes().toString().length <= 1, "w-[2.55rem]": currentMinutes().toString().length === 2}}
+                       class="number-input !rounded-none leading-1 !pl-0 !pr-0" maxLength="2"
+                       onInput={e => setTotalTimeMs(currentSeconds() * 1000 + 1000 * 60 * ValidateNumber(e, 60) + currentHours() * 1000 * 3600)} />
+                <span class="bg-opacity-0 time-hint-tag">m</span>
+
+                <input type="number" value={currentSeconds()} classList={{"w-[1.3rem]": currentSeconds().toString().length <= 1, "w-[2.55rem]": currentSeconds().toString().length === 2}}
+                       class="number-input !rounded-none leading-1 !pl-0 !pr-0" maxLength="2"
+                       onInput={e => setTotalTimeMs(1000 * ValidateNumber(e, 60) + currentMinutes() * 1000 * 60 + currentHours() * 1000 * 3600)} />
+                <span class="bg-opacity-0 time-hint-tag">s</span>
+            </div>
+            <Show when={currentError && currentError().length !== 0}>
+                <p class="mt-2 ml-2 text-lg font-medium text-error">{currentError()}</p>
+            </Show>
+        </div>
+    </>
+}
 // Note: Having separate interface feels dumb, but there is no better way to specify type
 interface EditableTimerDisplayProps {
     isPauseFronted: Accessor<boolean>,
@@ -29,41 +83,25 @@ interface EditableTimerDisplayProps {
 }
 // Displays time in hh:mm:ss format that can be editable
 const EditableTimerDisplay: Component<EditableTimerDisplayProps> = ({isPauseFronted, timerValueMs, setTimerValueMs}) => {
-    function OnTimeInputValueChanged(newValueInMs: number) {
-        // Validation is done by input field except the case when value is: "--:--:--"
-        // so extra check for NaN is required
-        if (!isNaN(newValueInMs)) {
-            setTimerValueMs(newValueInMs);
-        } else {
-            setTimerValueMs(0);
-        }
-    }
-
     // Values for countdown
     const totalSecondsLeft = () => timerValueMs() / 1000;
-
     const currentSeconds = () => Math.floor(totalSecondsLeft()) % 60;
     const currentMinutes = () => Math.floor(totalSecondsLeft() / 60) % 60;
     const currentHours = () => Math.floor(totalSecondsLeft() / 3600);
-    // Formatted time display
-    const timeDisplay: Accessor<string> = () => `${currentHours().toString().padStart(2, '0')}:${currentMinutes().toString().padStart(2, '0')}:${currentSeconds().toString().padStart(2, '0')}`;
 
     return <>
         <div class="flex gap-5 text-base-content">
-            <Show when={!isPauseFronted()} fallback={
-                <input onInput={e => OnTimeInputValueChanged(e.currentTarget.valueAsNumber)} class="time-input z-10" type="time" step="1" value={timeDisplay()} />
-            }>
+            <Show when={!isPauseFronted()} fallback={<TimeInput totalTimeMs={timerValueMs} setTotalTimeMs={setTimerValueMs} />}>
                 <div class="flex text-center z-10">
-                    <span class="countdown-container-value"><span style={{"--value": currentHours()}}></span>:</span>
-                    <span class="countdown-container-value"><span style={{"--value": currentMinutes()}}></span>:</span>
-                    <span class="countdown-container-value"><span style={{"--value": currentSeconds()}}></span></span>
+                    <span class="countdown-container-value"><span style={{"--value": currentHours()}}></span></span><span class="time-hint-tag">h</span>
+                    <span class="countdown-container-value"><span style={{"--value": currentMinutes()}}></span></span><span class="time-hint-tag">m</span>
+                    <span class="countdown-container-value"><span style={{"--value": currentSeconds()}}></span></span><span class="time-hint-tag">s</span>
                 </div>
             </Show>
         </div>
     </>
 }
 // Timer component that renders and handles most of the logic for pomodoro timer
-// TODO: add reset button
 function Timer() {
     // Interval is used to update only fronted timer
     let timerTickInterval: NodeJS.Timer;
@@ -209,22 +247,22 @@ function Timer() {
 }
 // Mini form for changing pomodoro info
 function PomodoroForm() {
-    // TODO: use solid-js built-in lazy?
     // Connecting to existing storage signal to sync with pomodoro info on the backend
-    var [pomodoroInfo, __pomodoroInfoSetter] = createSignal<PomodoroInfo>();
+    var [pomodoroInfo, __pomodoroInfoSetter] = createSignal<PomodoroInfo>({
+        // Will be overwritten later with the actual values from storage
+        isWorkingSession: true,
+        workSessionDurationMs: 0,
+        breakDurationMs: 0,
+    });
     connectToStorageSignalAsync<PomodoroInfo>(POMODORO_INFO_STORAGE_NAME).then((storageGetter) => {
         pomodoroInfo = storageGetter;
         __pomodoroInfoSetter(storageGetter());
-        // Updating derived signals
-        workSessionMs = () => pomodoroInfo().workSessionDurationMs;
-        workSessionDurationInput.valueAsNumber = workSessionMs();
+        // Updating all dependant signals with fresh values
+        setWorkSessionMs(pomodoroInfo().workSessionDurationMs);
     });
-    // region Work session input
-    // Signal for value in work session time
-    var [workSessionMs, __setWorkSessionMs] = createSignal(0);
-    // TODO: continue. step thing doesn't work. Signals stuff looks weird
-    const workSessionDurationInput = <input class="time-input z-10" step="3600" type="time" /> as HTMLInputElement;
-    // endregion
+
+    const [workSessionMs, setWorkSessionMs] = createSignal(0);
+    const [workSessionInputError, setWorkSessionInputError] = createSignal("");
 
     return <>
         <div class="flex flex-col space-y-2.5">
@@ -234,7 +272,8 @@ function PomodoroForm() {
                     <span class="label-text text-lg font-medium">Work session in hh:mm</span>
                 </label>
                 <label class="input-group input-group-md" >
-                    {workSessionDurationInput}
+                    <TimeInput totalTimeMs={workSessionMs}
+                               setTotalTimeMs={setWorkSessionMs} currentError={workSessionInputError} />
                 </label>
             </div>
         </div>

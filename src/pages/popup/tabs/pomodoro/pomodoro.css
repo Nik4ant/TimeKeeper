@@ -4,13 +4,20 @@
 .countdown-container-value {
     @apply countdown font-mono text-4xl;
 }
-
-.time-input {
+/* TODO: better name */
+.time-hint-tag {
+    @apply text-base self-center pl-0.5 pr-0.5;
+}
+.time-input, .number-input {
     @apply input input-ghost font-mono text-4xl;
 }
-.time-input:focus {
+.time-input:focus, .number-input:focus {
     outline: none;
 }
 .time-input::-webkit-calendar-picker-indicator {
+    display: none;
+}
+.number-input::-webkit-outer-spin-button,
+.number-input::-webkit-inner-spin-button {
     display: none;
 }
