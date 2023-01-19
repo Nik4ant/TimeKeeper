@@ -7,6 +7,7 @@ import {SendChromeMessage} from "../../../../utils/message_api";
 import {FaSolidBusinessTime} from "solid-icons/fa";
 import {FaSolidUserClock} from 'solid-icons/fa'
 import {connectToStorageSignalAsync} from "../../../../utils/storage_manager";
+import {render} from "solid-js/web";
 
 
 // Returns timer info from the background or undefined if error occurred in the process
@@ -30,7 +31,6 @@ const TimeInput: Component<TimeInputProps> = ({totalTimeMs, setTotalTimeMs, curr
     const ValidateNumber = (event: InputEvent & {currentTarget: HTMLInputElement, target: Element},
                             max: number, min: number = 0): number => {
         const sender: HTMLInputElement = event.currentTarget;
-        console.debug(sender.value, sender.valueAsNumber);
         // Validating length because setting attribute maxLength does nothing for some reason...
         sender.value = sender.value
             .replace(/[^0-9.]/g, '')
@@ -70,7 +70,7 @@ const TimeInput: Component<TimeInputProps> = ({totalTimeMs, setTotalTimeMs, curr
                 <span class="bg-opacity-0 time-hint-tag">s</span>
             </div>
             <Show when={currentError && currentError().length !== 0}>
-                <p class="mt-2 ml-2 text-lg font-medium text-error">{currentError()}</p>
+                <p class="text-lg font-medium text-error">{currentError()}</p>
             </Show>
         </div>
     </>
@@ -103,6 +103,8 @@ const EditableTimerDisplay: Component<EditableTimerDisplayProps> = ({isPauseFron
 }
 // Timer component that renders and handles most of the logic for pomodoro timer
 function Timer() {
+    // Note: It's highly recommended to check explanation in pomodoro_api.ts before proceeding
+
     // Interval is used to update only fronted timer
     let timerTickInterval: NodeJS.Timer;
     // region Timer signals
@@ -110,7 +112,7 @@ function Timer() {
     // Length of the timer (it resets only when timer ends or restarted)
     // (Initial value is 1 used to avoid division by 0 in the effect below)
     const [initialTimerDurationMs, setInitialTimerDurationMs] = createSignal(1);
-    // Used as a parameter for
+    // Used for a circle indicator
     const timeLeftInPercentage = () => {
         return timerValueMs() * 100 / initialTimerDurationMs();
     };
@@ -127,20 +129,44 @@ function Timer() {
             setIsPauseFrontend(!value);
             return;
         }
-        setIsPauseFrontend(value);
         // Play/start icon was pressed
         if (!value) {
+            // Note: Works for now, but could be better
+            // Used to update UI only if no error occurred (values are updated inside message callbacks)
+            var isAnyError = false;
+            const updateUIOnStartIcon = () => {
+                // Updating UI only if no error occurred
+                if (!isAnyError) {
+                    setIsPauseFrontend(value);
+                    timerTickInterval = setInterval(OneSecondTick, 1000);
+                } else {
+                    // Otherwise reset values
+                    setIsPauseFrontend(!value);
+                    sender.checked = !value;
+                }
+            }
+
             // Step 1. Check if this is a new timer (not an ongoing one)
             // Note: This is also works if timer was paused and its values were overwritten
             if (initialTimerDurationMs() !== timerValueMs()) {
                 // Step 2.1 if it is, create a timer
-                setInitialTimerDurationMs(timerValueMs());
-                SendChromeMessage(new Pomodoro.Message.CreateTimer(timerValueMs()))
+                SendChromeMessage<Pomodoro.Message.CreateTimerResponse>(new Pomodoro.Message.CreateTimer(timerValueMs()))
                     .then((response) => {
                         // Handling possible error from messaging system
                         if (!response.isOk) {
                             Unreachable(response.error.message);
+                            isAnyError = true;
+                        } else {
+                            // Handling possible error from the API
+                            const result = response.value;
+                            if (!result.isOk) {
+                                alert(result.error.message);
+                                isAnyError = true;
+                            } else {
+                                setInitialTimerDurationMs(timerValueMs());
+                            }
                         }
+                        updateUIOnStartIcon();  // Updating UI
                     });
             }
             else {
@@ -150,16 +176,18 @@ function Timer() {
                         // Handling possible error from the messaging system
                         if (!response.isOk) {
                             Unreachable(response.error.message);
+                            isAnyError = true;
                         } else {
                             const result = response.value;
                             // Handling possible error from the API
                             if (!result.isOk) {
                                 Unreachable(response.error.message);
+                                isAnyError = true;
                             }
                         }
+                        updateUIOnStartIcon();  // Updating UI
                     });
             }
-            timerTickInterval = setInterval(OneSecondTick, 1000);
         }
         // Pause icon was pressed
         else {
@@ -229,24 +257,46 @@ function Timer() {
     });
 
     return <>
-        <div class="radial-progress text-primary z-0" style={{"--value": timeLeftInPercentage(),
-            "--thickness": "4px", "--size": "14rem"}}>
-            <div class="flex flex-col justify-center">
-                <EditableTimerDisplay isPauseFronted={isPauseFronted} timerValueMs={timerValueMs} setTimerValueMs={setTimerValueMs} />
-                <div class="absolute bottom-5 left-1/2 right-1/2 flex justify-center">
-                    <label class="h-1/2 swap swap-rotate text-secondary hover:text-secondary-focus">
-                        <input type="checkbox" checked={isPauseFronted()}
-                               onClick={(e) => OnTimerIconClicked(e.currentTarget, !isPauseFronted())} />
-                        <AiOutlinePauseCircle class="swap-off fill-current" size={48} />
-                        <AiOutlinePlayCircle class="swap-on fill-current" size={48} />
-                    </label>
+        <div class="flex flex-col space-y-2">
+            <div class="radial-progress text-primary z-0" style={{"--value": timeLeftInPercentage(),
+                "--thickness": "4px", "--size": "14rem"}}>
+                <div class="flex flex-col justify-center">
+                    <EditableTimerDisplay isPauseFronted={isPauseFronted} timerValueMs={timerValueMs} setTimerValueMs={setTimerValueMs} />
+                    <div class="absolute bottom-5 left-1/2 right-1/2 flex justify-center">
+                        <label class="h-1/2 swap swap-rotate text-secondary hover:text-secondary-focus">
+                            <input type="checkbox" checked={isPauseFronted()}
+                                   onClick={(e) => OnTimerIconClicked(e.currentTarget, !isPauseFronted())} />
+                            <AiOutlinePauseCircle class="swap-off fill-current" size={48} />
+                            <AiOutlinePlayCircle class="swap-on fill-current" size={48} />
+                        </label>
+                    </div>
                 </div>
             </div>
         </div>
     </>
 }
 // Mini form for changing pomodoro info
-function PomodoroForm() {
+function PomodoroForm({rerenderTimer}) {
+    function UpdatePomodoroInfo() {
+        SendChromeMessage<Pomodoro.Message.SetInfoResponse>(new Pomodoro.Message.SetInfo(workSessionDurationMs(), breakDurationMs()))
+            .then((response) => {
+                // Handling possible error from the messaging system
+                if (!response.isOk) {
+                    Unreachable(response.error.message);
+                } else {
+                    // Handling possible error from the API
+                    const result = response.value;
+                    if (!result.isOk) {
+                        setCurrentError(result.error.message);
+                    } else {
+                        setCurrentError('');
+                        // If no errors occurred forcing timer component to rerender (update) itself
+                        rerenderTimer();
+                    }
+                }
+            });
+    }
+
     // Connecting to existing storage signal to sync with pomodoro info on the backend
     var [pomodoroInfo, __pomodoroInfoSetter] = createSignal<PomodoroInfo>({
         // Will be overwritten later with the actual values from storage
@@ -258,24 +308,31 @@ function PomodoroForm() {
         pomodoroInfo = storageGetter;
         __pomodoroInfoSetter(storageGetter());
         // Updating all dependant signals with fresh values
-        setWorkSessionMs(pomodoroInfo().workSessionDurationMs);
+        setWorkSessionDurationMs(pomodoroInfo().workSessionDurationMs);
+        setBreakDurationMs(pomodoroInfo().breakDurationMs);
     });
 
-    const [workSessionMs, setWorkSessionMs] = createSignal(0);
-    const [workSessionInputError, setWorkSessionInputError] = createSignal("");
+    const [workSessionDurationMs, setWorkSessionDurationMs] = createSignal(0);
+    const [breakDurationMs, setBreakDurationMs] = createSignal(0);
+    const [currentError, setCurrentError] = createSignal("");
 
     return <>
-        <div class="flex flex-col space-y-2.5">
+        <div class="flex flex-col space-y-2.5 items-center">
             <h1 class="text-3xl font-medium">Pomodoro details</h1>
-            <div class="form-control text-base font-medium">
-                <label class="label">
-                    <span class="label-text text-lg font-medium">Work session in hh:mm</span>
-                </label>
-                <label class="input-group input-group-md" >
-                    <TimeInput totalTimeMs={workSessionMs}
-                               setTotalTimeMs={setWorkSessionMs} currentError={workSessionInputError} />
-                </label>
-            </div>
+
+            <span class="label-text text-lg font-medium">Work session duration:</span>
+            <TimeInput totalTimeMs={workSessionDurationMs}
+                       setTotalTimeMs={setWorkSessionDurationMs} />
+
+            <span class="label-text text-lg font-medium">Break duration:</span>
+            <TimeInput totalTimeMs={breakDurationMs}
+                       setTotalTimeMs={setBreakDurationMs} />
+
+            <Show when={currentError().length !== 0}>
+                <p class="text-center text-lg font-medium text-error">{currentError()}</p>
+            </Show>
+
+            <button onClick={UpdatePomodoroInfo} class="btn btn-primary w-1/2">Update</button>
         </div>
     </>
 }
@@ -284,9 +341,7 @@ function PomodoroIndicator() {
     // Connecting to existing storage signal to sync with pomodoro info in the background
     var [storagePomodoroInfo, __setPomodoroInfo] = createSignal<PomodoroInfo>({
         // Will be overwritten later with the actual values from storage
-        isWorkingSession: true,
-        workSessionDurationMs: 0,
-        breakDurationMs: 0,
+        isWorkingSession: true, workSessionDurationMs: 0, breakDurationMs: 0,
     });
     connectToStorageSignalAsync<PomodoroInfo>(POMODORO_INFO_STORAGE_NAME).then((storageGetter) => {
         storagePomodoroInfo = storageGetter;
@@ -301,13 +356,13 @@ function PomodoroIndicator() {
 
                 <div class="swap-on">
                     <div class="flex flex-col justify-center">
-                        <FaSolidBusinessTime size={48} class="text-secondary" />
+                        <FaSolidBusinessTime size={48} class="text-primary" />
                         <span class="text-base-content text-lg">Work</span>
                     </div>
                 </div>
                 <div class="swap-off">
                     <div class="flex flex-col justify-center">
-                        <FaSolidUserClock size={48} class="text-secondary" />
+                        <FaSolidUserClock size={48} class="text-primary" />
                         <span class="text-base-content text-lg">Rest</span>
                     </div>
                 </div>
@@ -317,13 +372,22 @@ function PomodoroIndicator() {
 }
 
 export default function PomodoroRoot() {
+    // Rerenders timer component (used as a callback for PomodoroForm to force timer to reload its values)
+    function RerenderTimer() {
+        const timerContainerElement = document.getElementById("TimerContainer");
+        // Clear current one
+        timerContainerElement.innerHTML = '';
+        // Rerender component
+        render(Timer, timerContainerElement);
+    }
+
     return <>
         <div class="flex justify-around p-2">
             <div class="flex flex-col space-y-5 justify-center">
-                <Timer />
+                <span id="TimerContainer"><Timer /></span>
                 <PomodoroIndicator />
             </div>
-            <PomodoroForm />
+            <PomodoroForm rerenderTimer={RerenderTimer} />
         </div>
     </>
 }

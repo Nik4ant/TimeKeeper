@@ -1,5 +1,5 @@
 import {createSignal} from "solid-js";
-import {ErrorType, Maybe, Result, Unreachable} from "./custom_error";
+import {ErrorType, Maybe, Result} from "./custom_error";
 
 // Base type for messages
 export abstract class MessageType {
@@ -142,6 +142,7 @@ export async function SendChromeMessage<T = void>(message: MessageType): Promise
                 tryAgain = false;
                 continue;
             }
+            console.debug("Trying again didn't work. Error is thrown");
             return Result.Err(new UnexpectedChromeRuntimeError(`Messaging system try catch block: "${e}"`));
         }
     }

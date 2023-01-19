@@ -10,9 +10,12 @@ Quote from docs: "...setting delayInMinutes or periodInMinutes to less than 1 wi
 a warning. when [when is parameter for setting UNIX time] can be set to less than 1 minute after "now" without warning but won't actually cause the alarm to
 fire for at least 1 minute". Source: https://developer.chrome.com/docs/extensions/reference/alarms/#method-create
 
-TODO: test if 1 second timer actually works on end user machine (because it might work only because of dev mode)
-In order to make timer with 1 second precession following trick was used...
-When user creates a timer alarm is set
+Minimum timer value is still 1 minute, but in order to make timer with 1 second precession following trick was used...
+When user creates a timer, alarm is set to Date.now() + {time} and timer info is stored in storage.
+On the frontend countdown is started and every time user opens popup page new info is fetched from the background page.
+
+Pause works by stopping background timer and saving current values to storage
+Unpause works by starting a "new" timer using previous values from storage
 */
 
 //region
@@ -51,21 +54,37 @@ const [timerInfoStorage, setTimerInfoStorage] = await createStorageSignalAsync<T
 // endregion
 
 export namespace Pomodoro {
-    class UnpauseRunningTimerError implements ErrorType {
-        message: string;
+    // Minimum time delay possible limited by browser
+    const MIN_TIME_POSSIBLE_MS = 60 * 1000;
 
-        constructor() {
-            this.message = "Unreachable error! Can't unpause running timer";
+    export namespace Errors {
+        export class UnpauseRunningTimerError implements ErrorType {
+            message: string;
+
+            constructor() {
+                this.message = "Unreachable error! Can't unpause running timer";
+            }
+        }
+        export class UnexpectedAlarmError implements ErrorType {
+            message: string;
+
+            constructor(message: string) {
+                this.message = message;
+            }
+        }
+        export class TooSmallTimeValue implements ErrorType {
+            message: string;
+
+            timeValueMs: number;
+            timeValueSource: string;
+            constructor(timeValueMs: number, timeValueSource: string) {
+                const formattedTimeValue = new Date(timeValueMs).toISOString().slice(11, -5);
+                this.message = `${formattedTimeValue} from "${timeValueSource}" is less than minimal required ${MIN_TIME_POSSIBLE_MS / 1000 / 60} min (browser limitation)`;
+                this.timeValueMs = timeValueMs;
+                this.timeValueSource = timeValueSource;
+            }
         }
     }
-    class UnexpectedAlarmError implements ErrorType {
-        message: string;
-
-        constructor(message: string) {
-            this.message = message;
-        }
-    }
-
     // Types and containers for messaging system
     export namespace Message {
         export class Pause extends MessageType {
@@ -81,7 +100,7 @@ export namespace Pomodoro {
             }
 
         }
-        export type PauseResponse = Promise<Maybe<UnexpectedAlarmError>>;
+        export type PauseResponse = Promise<Maybe<Errors.UnexpectedAlarmError>>;
 
         export class Unpause extends MessageType {
             // Note: Again fighting with the fact the interface can't have static values
@@ -94,7 +113,7 @@ export namespace Pomodoro {
                 this.messageName = Unpause.NAME;
             }
         }
-        export type UnpauseResponse = Maybe<UnpauseRunningTimerError>;
+        export type UnpauseResponse = Maybe<Errors.UnpauseRunningTimerError>;
 
         export class CreateTimer extends MessageType {
             // Note: Again fighting with the fact the interface can't have static values
@@ -109,6 +128,7 @@ export namespace Pomodoro {
                 this.timerDurationMs = timerDurationMs;
             }
         }
+        export type CreateTimerResponse = Maybe<Errors.TooSmallTimeValue>;
 
         export class GetTimer extends MessageType {
             override readonly isAsync = true;
@@ -139,17 +159,17 @@ export namespace Pomodoro {
                 this.messageName = SetInfo.NAME;
                 this.workSessionDurationMs = workingSessionDurationMs;
                 this.breakDurationMs = breakDurationMs;
-                // If isWorkingSession parameter wasn't specified using value from storage
-                this.isWorkingSession = isWorkingSession === undefined ? pomodoroInfoStorage().isWorkingSession : isWorkingSession;
+                this.isWorkingSession = isWorkingSession;
             }
         }
+        export type SetInfoResponse = Maybe<Errors.TooSmallTimeValue>;
     }
     // Api that handles new messages and contains pomodoro api logic
     export class Api extends MessageBasedApi {
         public static override readonly MESSAGE_RECEIVER_NAME = "PomodoroApiReceiver";
         private static readonly POMODORO_CHROME_ALARM_NAME = "TimeKeeperPomodoroAlarm";
 
-        static override OnNewMessageReceived(message): Message.PauseResponse | Message.UnpauseResponse | Message.GetTimerResponse | void {
+        static override OnNewMessageReceived(message): Message.PauseResponse | Message.UnpauseResponse | Message.SetInfoResponse | Message.GetTimerResponse | Message.CreateTimerResponse {
             switch (message.messageName) {
                 case Message.Pause.NAME:
                     return Api.Pause();
@@ -163,7 +183,7 @@ export namespace Pomodoro {
                     const infoMessage = message as Message.SetInfo;
                     return Api.SetInfo(infoMessage.workSessionDurationMs, infoMessage.breakDurationMs, infoMessage.isWorkingSession);
                 default:
-                    console.error(`Unpredictable error! Unexpected message "${message}" to receiver "${Api.MESSAGE_RECEIVER_NAME}"`);
+                    console.error(`Unpredictable error! Unexpected message "${message.messageName}" to receiver "${Api.MESSAGE_RECEIVER_NAME}"`);
             }
         }
 
@@ -196,6 +216,8 @@ export namespace Pomodoro {
         private static OnChromeAlarm(alarm: chrome.alarms.Alarm): void {
             // Check if alarm is related to pomodoro
             if (alarm.name === Api.POMODORO_CHROME_ALARM_NAME) {
+                console.debug("BIP-BOP; BIP-BOP; TIMER ENDED AT: ", Date.now());
+
                 var notificationMessage: string;
                 var notificationIconUrl: string;
                 // Step 1. Update pomodoro info session status
@@ -219,10 +241,11 @@ export namespace Pomodoro {
                 // Step 3. Send notification
                 chrome.notifications.create({
                     type: "basic",
-                    iconUrl: notificationIconUrl,
+                    priority: 2,
                     title: "TimeKeeper",
                     message: notificationMessage,
-                    priority: 2
+                    iconUrl: notificationIconUrl,
+                    isClickable: true,
                 });
             }
         }
@@ -250,7 +273,11 @@ export namespace Pomodoro {
         }
 
         // Starts background timer and updates storage info
-        private static CreateTimer(timerDurationMs: number): void {
+        private static CreateTimer(timerDurationMs: number): Maybe<Errors.TooSmallTimeValue> {
+            // Validate time value first
+            if (timerDurationMs < MIN_TIME_POSSIBLE_MS) {
+                return Maybe.Err(new Errors.TooSmallTimeValue(timerDurationMs, "Pomodoro timer"));
+            }
             // Step 1. Start a chrome alarm that will be processed in the background
             chrome.alarms.create(Api.POMODORO_CHROME_ALARM_NAME, {
                 when: new Date().setMilliseconds(timerDurationMs),
@@ -264,15 +291,16 @@ export namespace Pomodoro {
                 lastPauseDate: 0,
             }
             setTimerInfoStorage(pomodoroTimerInfo);
+            return Maybe.Ok();
         }
 
         // Pauses currently running timer
-        private static async Pause(): Promise<Maybe<UnexpectedAlarmError>> {
+        private static async Pause(): Promise<Maybe<Errors.UnexpectedAlarmError>> {
             const chromeAlarm = await chrome.alarms.get(Api.POMODORO_CHROME_ALARM_NAME);
             // In reality end user can't pause timer that doesn't exist, but for some reason
             // error can appear here (most likely error during development)
             if (chromeAlarm === undefined) {
-                return Maybe.Err(new UnexpectedAlarmError("Unreachable error! Can't pause not existing timer"));
+                return Maybe.Err(new Errors.UnexpectedAlarmError("Unreachable error! Can't pause not existing timer"));
             }
             // Step 1. Update timer info in storage to reuse it later (when timer is resumed)
             var timerInfo = timerInfoStorage();
@@ -284,17 +312,17 @@ export namespace Pomodoro {
             const wasAlarmCleared = await chrome.alarms.clear(Api.POMODORO_CHROME_ALARM_NAME);
             if (!wasAlarmCleared) {
                 chrome.alarms.clearAll();
-                return Maybe.Err(new UnexpectedAlarmError("Unreachable error! Can't clear chrome alarm to pause timer.\nTo fix this all alarms were cleared"));
+                return Maybe.Err(new Errors.UnexpectedAlarmError("Unreachable error! Can't clear chrome alarm to pause timer.\nTo fix this all alarms were cleared"));
             }
             return Maybe.Ok();
         }
 
         // Unpauses most recent timer
-        private static Unpause(): Maybe<UnpauseRunningTimerError> {
+        private static Unpause(): Maybe<Errors.UnpauseRunningTimerError> {
             // Check if there is any alarm to pause
             var timerInfo = timerInfoStorage()
             if (!timerInfo.isPaused) {
-                return Maybe.Err(new UnpauseRunningTimerError());
+                return Maybe.Err(new Errors.UnpauseRunningTimerError());
             }
             // Step 1. Calculate when "new" background alarm needs to fire
             const totalMsLeft = timerInfo.durationMs - (timerInfo.lastPauseDate - timerInfo.startTimeDate)
@@ -315,15 +343,38 @@ export namespace Pomodoro {
             return pomodoroInfoStorage().isWorkingSession;
         }
 
-        // Note: No validation (yet) because it's handled on the frontend via html input tag.
-        // Would be good to have it here as well, but nah...whatever...
-        private static SetInfo(workingSessionDurationMs: number, breakDurationMs: number, isWorkingSession: boolean): void {
-            const newInfo: PomodoroInfo = {
+        private static SetInfo(workingSessionDurationMs: number, breakDurationMs: number, isWorkingSession?: boolean): Maybe<Errors.TooSmallTimeValue> {
+            // Step 1. Validate info
+            if (breakDurationMs < MIN_TIME_POSSIBLE_MS) {
+                return Maybe.Err(new Errors.TooSmallTimeValue(breakDurationMs, "break duration"));
+            }
+            if (workingSessionDurationMs < MIN_TIME_POSSIBLE_MS) {
+                return Maybe.Err(new Errors.TooSmallTimeValue(breakDurationMs, "work session duration"));
+            }
+
+            const oldPomodoroInfo = pomodoroInfoStorage();
+            const newPomodoroInfo: PomodoroInfo = {
                 workSessionDurationMs: workingSessionDurationMs,
                 breakDurationMs: breakDurationMs,
-                isWorkingSession: isWorkingSession
+                isWorkingSession: isWorkingSession === undefined ? oldPomodoroInfo.isWorkingSession : isWorkingSession,
             };
-            setPomodoroInfoStorage(newInfo);
+            // Step 2. If timer is on pause and hasn't changed update its values according to new info
+            if (timerInfoStorage().isPaused) {
+                var newTimerInfo = timerInfoStorage();
+
+                if (oldPomodoroInfo.isWorkingSession && timerInfoStorage().timeLeftMs === oldPomodoroInfo.workSessionDurationMs) {
+                    newTimerInfo.timeLeftMs = newPomodoroInfo.workSessionDurationMs;
+                    newTimerInfo.durationMs = newPomodoroInfo.workSessionDurationMs;
+                }
+                else if (!oldPomodoroInfo.isWorkingSession && timerInfoStorage().timeLeftMs === oldPomodoroInfo.breakDurationMs) {
+                    newTimerInfo.timeLeftMs = newPomodoroInfo.breakDurationMs;
+                    newTimerInfo.durationMs = newPomodoroInfo.breakDurationMs;
+                }
+                setTimerInfoStorage(newTimerInfo);
+            }
+            // Step 3. Update info
+            setPomodoroInfoStorage(newPomodoroInfo);
+            return Maybe.Ok();
         }
     }
 }
