@@ -215,6 +215,7 @@ export namespace Pomodoro {
 
         private static OnChromeAlarm(alarm: chrome.alarms.Alarm): void {
             // Check if alarm is related to pomodoro
+            console.log("Alarm occurred. Alarm name: ", alarm.name);
             if (alarm.name === Api.POMODORO_CHROME_ALARM_NAME) {
                 console.debug("BIP-BOP; BIP-BOP; TIMER ENDED AT: ", Date.now());
 

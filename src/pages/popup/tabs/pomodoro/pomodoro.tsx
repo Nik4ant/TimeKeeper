@@ -258,17 +258,19 @@ function Timer() {
 
     return <>
         <div class="flex flex-col space-y-2">
-            <div class="radial-progress text-primary z-0" style={{"--value": timeLeftInPercentage(),
-                "--thickness": "4px", "--size": "14rem"}}>
-                <div class="flex flex-col justify-center">
-                    <EditableTimerDisplay isPauseFronted={isPauseFronted} timerValueMs={timerValueMs} setTimerValueMs={setTimerValueMs} />
-                    <div class="absolute bottom-5 left-1/2 right-1/2 flex justify-center">
-                        <label class="h-1/2 swap swap-rotate text-secondary hover:text-secondary-focus">
-                            <input type="checkbox" checked={isPauseFronted()}
-                                   onClick={(e) => OnTimerIconClicked(e.currentTarget, !isPauseFronted())} />
-                            <AiOutlinePauseCircle class="swap-off fill-current" size={48} />
-                            <AiOutlinePlayCircle class="swap-on fill-current" size={48} />
-                        </label>
+            <div class="radial-progress text-primary/[.25] -z-0" style={{"--value": 100, "--thickness": "4px", "--size": "14rem"}}>
+                <div class="radial-progress text-primary z-0" style={{"--value": timeLeftInPercentage(),
+                    "--thickness": "4px", "--size": "14rem"}}>
+                    <div class="flex flex-col justify-center z-auto">
+                        <EditableTimerDisplay isPauseFronted={isPauseFronted} timerValueMs={timerValueMs} setTimerValueMs={setTimerValueMs} />
+                        <div class="absolute bottom-5 left-1/2 right-1/2 flex justify-center">
+                            <label class="h-1/2 swap swap-rotate text-secondary hover:text-secondary-focus">
+                                <input type="checkbox" checked={isPauseFronted()}
+                                       onClick={(e) => OnTimerIconClicked(e.currentTarget, !isPauseFronted())} />
+                                <AiOutlinePauseCircle class="swap-off fill-current" size={48} />
+                                <AiOutlinePlayCircle class="swap-on fill-current" size={48} />
+                            </label>
+                        </div>
                     </div>
                 </div>
             </div>
